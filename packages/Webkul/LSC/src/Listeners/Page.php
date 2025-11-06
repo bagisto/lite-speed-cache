@@ -34,7 +34,7 @@ class Page
     public function beforeDelete($pageId)
     {
         $page = $this->pageRepository->find($pageId);
-        
+
         LSCache::purgeTags(['page_'.$page->url_key]);
     }
 }

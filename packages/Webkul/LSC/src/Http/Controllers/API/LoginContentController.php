@@ -2,44 +2,52 @@
 
 namespace Webkul\LSC\Http\Controllers\API;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Webkul\Shop\Http\Controllers\API\APIController;
 
 class LoginContentController extends APIController
 {
     /**
-     * Login dropdown content html for desktop.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Render login content view and return as JSON.
      */
-    public function getLoginDesktopDropdownHtml()
+    private function renderLoginContent(string $viewName): JsonResponse
     {
-        return response()->json([
-            'data' => view('lsc::shop.home.login-desktop-dropdown')->render(),
-        ], Response::HTTP_OK);
+        try {
+            $html = view($viewName)->render();
+
+            return response()->json([
+                'data' => $html,
+            ], Response::HTTP_OK);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'Unable to render view: '.$viewName,
+                'message' => $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Login dropdown content html for desktop.
+     */
+    public function getLoginDesktopDropdownHtml(): JsonResponse
+    {
+        return $this->renderLoginContent('lsc::shop.home.login-desktop-dropdown');
     }
 
     /**
      * Login dropdown content html for mobile.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function getLoginMobileDropdownHtml()
+    public function getLoginMobileDropdownHtml(): JsonResponse
     {
-        return response()->json([
-            'data' => view('lsc::shop.home.login-mobile-dropdown')->render(),
-        ], Response::HTTP_OK);
+        return $this->renderLoginContent('lsc::shop.home.login-mobile-dropdown');
     }
 
     /**
      * Login drawer content html for mobile.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function getLoginMobileDrawerHtml()
+    public function getLoginMobileDrawerHtml(): JsonResponse
     {
-        return response()->json([
-            'data' => view('lsc::shop.home.login-mobile-drawer')->render(),
-        ], Response::HTTP_OK);
+        return $this->renderLoginContent('lsc::shop.home.login-mobile-drawer');
     }
 }

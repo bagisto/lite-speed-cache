@@ -3,12 +3,15 @@
 namespace Webkul\LSC\Listeners;
 
 use LSCache;
+use Webkul\LSC\Traits\DeletesAllCache;
 use Webkul\Product\Repositories\ProductBundleOptionProductRepository;
 use Webkul\Product\Repositories\ProductGroupedProductRepository;
 use Webkul\Product\Repositories\ProductRepository;
 
 class Product
 {
+    use DeletesAllCache;
+
     /**
      * Create a new listener instance.
      *
@@ -64,6 +67,8 @@ class Product
             $urls[] = 'product_'.$product->url_key;
         }
 
+        $this->deletePrivCache();
+
         return $urls;
     }
 
@@ -73,7 +78,7 @@ class Product
      * @param  \Webkul\Product\Contracts\Product  $product
      * @return array
      */
-    public function getAllRelatedProducts($product)
+    private function getAllRelatedProducts($product)
     {
         $products = [$product];
 
@@ -109,7 +114,7 @@ class Product
      * @param  \Webkul\Product\Contracts\Product  $product
      * @return array
      */
-    public function getParentBundleProducts($product)
+    private function getParentBundleProducts($product)
     {
         $bundleOptionProducts = $this->productBundleOptionProductRepository->findWhere([
             'product_id' => $product->id,
@@ -130,7 +135,7 @@ class Product
      * @param  \Webkul\Product\Contracts\Product  $product
      * @return array
      */
-    public function getParentGroupProducts($product)
+    private function getParentGroupProducts($product)
     {
         $groupedOptionProducts = $this->productGroupedProductRepository->findWhere([
             'associated_product_id' => $product->id,

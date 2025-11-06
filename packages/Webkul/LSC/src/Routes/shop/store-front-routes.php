@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\BookingProductController;
 use Webkul\Shop\Http\Controllers\CompareController;
 use Webkul\Shop\Http\Controllers\HomeController;
@@ -9,44 +10,64 @@ use Webkul\Shop\Http\Controllers\ProductController;
 use Webkul\Shop\Http\Controllers\ProductsCategoriesProxyController;
 use Webkul\Shop\Http\Controllers\SearchController;
 use Webkul\Shop\Http\Controllers\SubscriptionController;
-use Webkul\Shop\Http\Controllers\Customer\CustomerController;
 
 /**
  * CMS pages.
  */
-Route::get('page/{slug}', [PageController::class, 'view'])
-    ->name('shop.cms.page')
-    ->middleware(['cache.response', 'lscache.response']);
+Route::middleware(['lscache.response', 'cache.response'])->group(function () {
+    Route::get('page/{slug}', [PageController::class, 'view'])
+        ->name('shop.cms.page');
+
+    /**
+     * Fallback route.
+     */
+    Route::fallback(ProductsCategoriesProxyController::class.'@index')
+        ->name('shop.product_or_category.index');
+
+    /**
+     * Store front home.
+     */
+    Route::get('/', [HomeController::class, 'index'])
+        ->name('shop.home.index');
+
+    Route::get('contact-us', [HomeController::class, 'contactUs'])
+        ->name('shop.home.contact_us');
+
+    /**
+     * Store front cart.
+     */
+    Route::get('api/checkout/cart', [CartController::class, 'index'])
+        ->name('shop.api.checkout.cart.index');
+
+    Route::post('api/checkout/cart', [CartController::class, 'store'])
+        ->name('shop.api.checkout.cart.store');
+
+    Route::delete('api/checkout/cart', [CartController::class, 'destroy'])
+        ->name('shop.api.checkout.cart.destroy');
+
+    /**
+     * Store front search.
+     */
+    Route::get('search', [SearchController::class, 'index'])
+        ->name('shop.search.index');
+
+    /**
+     * Compare products
+     */
+    Route::get('compare', [CompareController::class, 'index'])
+        ->name('shop.compare.index');
+});
 
 /**
- * Fallback route.
+ * Contact us form submit route.
  */
-Route::fallback(ProductsCategoriesProxyController::class.'@index')
-    ->name('shop.product_or_category.index')
-    ->middleware(['cache.response', 'lscache.response']);
-
-/**
- * Store front home.
- */
-Route::get('/', [HomeController::class, 'index'])
-    ->name('shop.home.index')
-    ->middleware(['cache.response', 'lscache.response']);
-
-Route::get('contact-us', [HomeController::class, 'contactUs'])
-    ->name('shop.home.contact_us')
-    ->middleware(['cache.response', 'lscache.response']);
-
 Route::post('contact-us/send-mail', [HomeController::class, 'sendContactUsMail'])
     ->name('shop.home.contact_us.send_mail')
     ->middleware('cache.response');
 
 /**
- * Store front search.
+ * Search upload route.
  */
-Route::get('search', [SearchController::class, 'index'])
-    ->name('shop.search.index')
-    ->middleware(['cache.response', 'lscache.response']);
-
 Route::post('search/upload', [SearchController::class, 'upload'])->name('shop.search.upload');
 
 /**
@@ -57,13 +78,6 @@ Route::controller(SubscriptionController::class)->group(function () {
 
     Route::get('subscription/{token}', 'destroy')->name('shop.subscription.destroy');
 });
-
-/**
- * Compare products
- */
-Route::get('compare', [CompareController::class, 'index'])
-    ->name('shop.compare.index')
-    ->middleware(['cache.response', 'lscache.response']);
 
 /**
  * Downloadable products

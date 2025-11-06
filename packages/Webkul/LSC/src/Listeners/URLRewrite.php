@@ -28,7 +28,7 @@ class URLRewrite
             'product'  => ['product_'.$oldSlug],
             'cms_page' => ['page_'.$oldSlug],
             'category' => ['category_'.$oldSlug],
-            default => []
+            default    => []
         };
 
         LSCache::purgeTags($tags);
@@ -43,14 +43,14 @@ class URLRewrite
     public function beforeDelete($urlRewriteId)
     {
         $urlRewrite = $this->urlRewriteRepository->find($urlRewriteId);
-        
+
         $oldSlug = $urlRewrite->request_path;
 
         $tags = match ($urlRewrite->entity_type) {
             'product'  => ['product_'.$oldSlug],
             'cms_page' => ['page_'.$oldSlug],
             'category' => ['category_'.$oldSlug],
-            default => []
+            default    => []
         };
 
         LSCache::purgeTags($tags);

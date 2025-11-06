@@ -1,11 +1,7 @@
 {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.before') !!}
 
 <div class="flex min-h-[78px] w-full justify-between border border-b border-l-0 border-r-0 border-t-0 px-[60px] max-1180:px-8">
-    <!--
-        This section will provide categories for the first, second, and third levels. If
-        additional levels are required, users can customize them according to their needs.
-    -->
-    <!-- Left Nagivation Section -->
+    <!-- Left Navigation Section -->
     <div class="flex items-center gap-x-10 max-[1180px]:gap-x-5">
         {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.logo.before') !!}
 
@@ -47,7 +43,7 @@
         {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.category.after') !!}
     </div>
 
-    <!-- Right Nagivation Section -->
+    <!-- Right Navigation Section -->
     <div class="flex items-center gap-x-9 max-[1100px]:gap-x-6 max-lg:gap-x-8">
 
         {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.search_bar.before') !!}
@@ -145,6 +141,7 @@
             </x-shop::dropdown>
 
             {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.profile.after') !!}
+
         </div>
     </div>
 </div>
@@ -233,7 +230,6 @@
         <div v-else>
             <!-- Categories Navigation -->
             <div class="flex items-center">
-                <!-- "All" button for opening the category drawer -->
                 <div
                     class="flex h-[77px] cursor-pointer items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
                     @click="toggleCategoryDrawer"
@@ -416,9 +412,7 @@
         type="text/x-template"
         id="v-login-desktop-dropdown-template"
     >
-        <div>
-            <div ref="container"></div>
-        </div>
+        <div ref="container"></div>
     </script>
 
     <script type="module">
@@ -448,10 +442,15 @@
             data() {
                 return {
                     isLoading: true,
+
                     categories: [],
+
                     isDrawerActive: false,
+
                     currentViewLevel: 'main',
+
                     currentSecondLevelCategory: null,
+
                     currentParentCategory: null
                 }
             },
@@ -484,7 +483,8 @@
                 },
 
                 toggleCategoryDrawer() {
-                    this.isDrawerActive = !this.isDrawerActive;
+                    this.isDrawerActive = ! this.isDrawerActive;
+
                     if (this.isDrawerActive) {
                         this.currentViewLevel = 'main';
                     }
@@ -518,4 +518,5 @@
         });
     </script>
 @endPushOnce
+
 {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.after') !!}

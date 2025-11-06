@@ -1,6 +1,8 @@
 # LiteSpeed Cache for Bagisto
 
-A **LiteSpeed Cache integration** for the [Bagisto](https://bagisto.com/) framework that helps boost performance and reduce server load by caching frequently accessed content.  
+A **LiteSpeed Cache integration** for the [Bagisto](https://bagisto.com/) framework that helps boost performance and reduce server load by caching frequently accessed content.
+
+> ✅ **We use OpenLiteSpeed LSCache — an Open-Source, High-Performance Cache Engine**
 
 This package allows you to easily manage cache for:  
 - ⚡ Homepage static content  
@@ -9,6 +11,23 @@ This package allows you to easily manage cache for:
 - 🔍 Search results  
 
 With LiteSpeed Cache, your store will deliver content faster, reduce database queries, and scale better under high traffic.
+
+---
+
+## 🌟 Why OpenLiteSpeed LSCache?
+
+OpenLiteSpeed LSCache is an **open-source, built-in full-page caching system** tightly integrated with the OpenLiteSpeed web server.
+It significantly improves application performance without requiring complex configurations.
+
+### ✅ Key Benefits
+
+* 🚀 **High-performance full-page caching**
+* 📈 **Improves site speed & reduces TTFB (Time To First Byte)**
+* 🔁 **Supports dynamic & static caching**
+* 💾 **Reduces server workload & DB queries**
+* 🌐 **Open-source & production-ready**
+* ⚙️ **Fine-tuned cache controls for specific routes**
+* 🔒 **Secure & maintained by LiteSpeed Technologies**
 
 ---
 
@@ -67,11 +86,7 @@ composer dump-autoload
 ```
 
 ```php
-php artisan vendor:publish --provider="Webkul\LSC\Providers\LSCServiceProvider" --force
-```
-
-```php
-php artisan optimize:clear
+php artisan litespeed:install
 ```
 
 ### For more information about the LSCache, You can follow the [Official LiteSpeed Documentation](https://docs.litespeedtech.com/lscache/lsclaravel/installation/#installation)

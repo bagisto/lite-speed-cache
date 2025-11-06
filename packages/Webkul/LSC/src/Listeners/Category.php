@@ -4,9 +4,12 @@ namespace Webkul\LSC\Listeners;
 
 use LSCache;
 use Webkul\Category\Repositories\CategoryRepository;
+use Webkul\LSC\Traits\DeletesAllCache;
 
 class Category
 {
+    use DeletesAllCache;
+
     /**
      * Create a new listener instance.
      *
@@ -25,6 +28,8 @@ class Category
         foreach (core()->getAllLocales() as $locale) {
             if ($categoryTranslation = $category->translate($locale->code)) {
                 LSCache::purgeTags(['category_'.$categoryTranslation->slug]);
+
+                $this->deletePrivCache();
             }
 
             LSCache::purgeTags(['category_'.$category->translate(core()->getDefaultLocaleCodeFromDefaultChannel())->slug]);
@@ -44,6 +49,8 @@ class Category
         foreach (core()->getAllLocales() as $locale) {
             if ($categoryTranslation = $category->translate($locale->code)) {
                 LSCache::purgeTags(['category_'.$categoryTranslation->slug]);
+
+                $this->deletePrivCache();
             }
 
             LSCache::purgeTags(['category_'.$category->translate(core()->getDefaultLocaleCodeFromDefaultChannel())->slug]);

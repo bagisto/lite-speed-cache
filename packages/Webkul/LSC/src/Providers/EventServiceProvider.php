@@ -83,5 +83,21 @@ class EventServiceProvider extends ServiceProvider
         'marketing.search_seo.url_rewrites.delete.before' => [
             'Webkul\LSC\Listeners\URLRewrite@beforeDelete',
         ],
+
+        'checkout.cart.add.before' => [
+            'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
+        ],
+
+        'checkout.cart.update.after' => [
+            'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
+        ],
+
+        'checkout.cart.delete.before' => [
+            'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
+        ],
+
+        'customer.after.login' => [
+            'Webkul\LSC\Listeners\CustomerSession@afterCreate',
+        ],
     ];
 }

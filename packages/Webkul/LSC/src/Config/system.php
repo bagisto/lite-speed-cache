@@ -8,10 +8,10 @@ return [
         'key'  => 'lsc',
         'name' => 'lsc::app.configuration.index.lsc.title',
         'info' => 'lsc::app.configuration.index.lsc.info',
-        'sort' => 8,
+        'sort' => 1,
     ], [
         'key'  => 'lsc.configuration',
-        'name' => 'lsc::app.configuration.index.lsc.configuration.title',
+        'name' => 'lsc::app.configuration.index.lsc.title',
         'info' => 'lsc::app.configuration.index.lsc.configuration.info',
         'icon' => 'settings/store.svg',
         'sort' => 1,

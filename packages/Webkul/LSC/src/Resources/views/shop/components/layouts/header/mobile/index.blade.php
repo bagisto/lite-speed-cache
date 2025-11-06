@@ -1,7 +1,3 @@
-<!--
-    This code needs to be refactored to reduce the amount of PHP in the Blade
-    template as much as possible.
--->
 @php
     $showCompare = (bool) core()->getConfigData('catalog.products.settings.compare_option');
 
@@ -35,11 +31,13 @@
             </a>
 
             {!! view_render_event('bagisto.shop.components.layouts.header.mobile.logo.after') !!}
+
         </div>
 
         <!-- Right Navigation -->
         <div>
             <div class="flex items-center gap-x-5 max-md:gap-x-4">
+
                 {!! view_render_event('bagisto.shop.components.layouts.header.mobile.compare.before') !!}
 
                 @if($showCompare)
@@ -69,9 +67,7 @@
                         </x-slot>
 
                         <x-slot:content>
-                            <v-login-mobile-dropdown
-                                showWishlist="{{ $showWishlist }}"
-                            ></v-login-mobile-dropdown>
+                            <v-login-mobile-dropdown showWishlist="{{ $showWishlist }}"></v-login-mobile-dropdown>
                         </x-slot:content>
                     </x-shop::dropdown>
                 </div>
@@ -103,7 +99,7 @@
 
     {!! view_render_event('bagisto.shop.components.layouts.header.mobile.search.before') !!}
 
-    <!-- Serach Catalog Form -->
+    <!-- Search Catalog Form -->
     <form action="{{ route('shop.search.index') }}" class="flex w-full items-center">
         <label
             for="organic-search"
@@ -131,10 +127,14 @@
     </form>
 
     {!! view_render_event('bagisto.shop.components.layouts.header.mobile.search.after') !!}
+
 </div>
 
 @pushOnce('scripts')
-    <script type="text/x-template" id="v-mobile-drawer-template">
+    <script
+        type="text/x-template"
+        id="v-mobile-drawer-template"
+    >
         <x-shop::drawer
             position="left"
             width="100%"
@@ -208,7 +208,7 @@
                             </x-slot>
                         </x-shop::drawer>
 
-                        <!-- Seperator -->
+                        <!-- Separator -->
                         <span class="h-5 w-0.5 bg-zinc-200"></span>
 
                         <!-- Sort Drawer -->
@@ -327,6 +327,7 @@
                             aria-label="Go back"
                         >
                             <span class="icon-arrow-left rtl:icon-arrow-right text-lg"></span>
+
                             <div class="text-base font-medium text-black">
                                 @lang('shop::app.components.layouts.header.mobile.back-button')
                             </div>
@@ -366,9 +367,7 @@
         type="text/x-template"
         id="v-login-mobile-drawer-template"
     >
-        <div>
-            
-        </div>
+        <div></div>
     </script>
 
     <script type="module">
@@ -457,6 +456,7 @@
             mounted() {
                 this.getLoginMobileDrawer();
             },
+
             methods: {
                 getLoginMobileDrawer() {
                     this.$axios.get("{{ route('shop.api.home.login_mobile_drawer') }}")
