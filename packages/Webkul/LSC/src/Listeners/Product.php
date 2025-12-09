@@ -18,9 +18,9 @@ class Product
      * @return void
      */
     public function __construct(
-        protected ProductRepository $productRepository,
         protected ProductBundleOptionProductRepository $productBundleOptionProductRepository,
-        protected ProductGroupedProductRepository $productGroupedProductRepository
+        protected ProductGroupedProductRepository $productGroupedProductRepository,
+        protected ProductRepository $productRepository,
     ) {}
 
     /**

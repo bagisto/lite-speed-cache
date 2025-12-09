@@ -20,6 +20,10 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\Product@beforeDelete',
         ],
 
+        'catalog.category.create.after' => [
+            'Webkul\LSC\Listeners\Category@afterUpdate',
+        ],
+
         'catalog.category.update.after' => [
             'Webkul\LSC\Listeners\Category@afterUpdate',
         ],
@@ -36,15 +40,15 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\Review@beforeDelete',
         ],
 
-        'checkout.order.save.after'     => [
+        'checkout.order.save.after' => [
             'Webkul\LSC\Listeners\Order@afterCancelOrCreate',
         ],
 
-        'sales.order.cancel.after'      => [
+        'sales.order.cancel.after' => [
             'Webkul\LSC\Listeners\Order@afterCancelOrCreate',
         ],
 
-        'sales.refund.save.after'       => [
+        'sales.refund.save.after' => [
             'Webkul\LSC\Listeners\Refund@afterCreate',
         ],
 
