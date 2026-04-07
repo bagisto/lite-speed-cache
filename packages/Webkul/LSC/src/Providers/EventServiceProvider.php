@@ -12,8 +12,15 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $listen = [
+        'catalog.product.create.after'  => [
+            'Webkul\LSC\Listeners\Product@afterCreate',
+        ],
+
         'catalog.product.update.after'  => [
             'Webkul\LSC\Listeners\Product@afterUpdate',
+        ],
+        'customer.wishlist.create.after' => [
+            'Webkul\LSC\Listeners\Product@afterCreate',
         ],
 
         'catalog.product.delete.before' => [
@@ -25,6 +32,10 @@ class EventServiceProvider extends ServiceProvider
         ],
 
         'catalog.category.update.after' => [
+            'Webkul\LSC\Listeners\Category@afterUpdate',
+        ],
+
+        'catalog.categories.mass-update.after' => [
             'Webkul\LSC\Listeners\Category@afterUpdate',
         ],
 
@@ -58,6 +69,28 @@ class EventServiceProvider extends ServiceProvider
 
         'cms.page.delete.before' => [
             'Webkul\LSC\Listeners\Page@beforeDelete',
+        ],
+
+        'customer.compare.create.after' => [
+            'Webkul\LSC\Listeners\Compare@afterUpdate',
+        ],
+
+        'customer.compare.delete.before' => [
+            'Webkul\LSC\Listeners\Compare@beforeDelete',
+        ],
+
+        'customer.compare.delete-all.before' => [
+            'Webkul\LSC\Listeners\Compare@beforeDelete',
+        ],
+
+        'customer.after.login' => [
+            'Webkul\LSC\Listeners\Session@session',
+            'Webkul\LSC\Listeners\CustomerSession@afterCreate',
+        ],
+
+        'customer.after.logout' => [
+            'Webkul\LSC\Listeners\Session@session',
+            'Webkul\LSC\Listeners\CustomerSession@afterDestroy',
         ],
 
         'theme_customization.create.after' => [
@@ -98,10 +131,6 @@ class EventServiceProvider extends ServiceProvider
 
         'checkout.cart.delete.before' => [
             'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
-        ],
-
-        'customer.after.login' => [
-            'Webkul\LSC\Listeners\CustomerSession@afterCreate',
         ],
     ];
 }

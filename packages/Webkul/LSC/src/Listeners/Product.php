@@ -18,10 +18,23 @@ class Product
      * @return void
      */
     public function __construct(
-        protected ProductBundleOptionProductRepository $productBundleOptionProductRepository,
-        protected ProductGroupedProductRepository $productGroupedProductRepository,
         protected ProductRepository $productRepository,
+        protected ProductBundleOptionProductRepository $productBundleOptionProductRepository,
+        protected ProductGroupedProductRepository $productGroupedProductRepository
     ) {}
+
+    /**
+     * After product create - purge home cache for new products
+     *
+     * @param  \Webkul\Product\Contracts\Product  $product
+     * @return void
+     */
+    public function afterCreate($product)
+    {
+        LSCache::purgeTags(['home']);
+
+        $this->deletePrivCache();
+    }
 
     /**
      * Update or create product page cache

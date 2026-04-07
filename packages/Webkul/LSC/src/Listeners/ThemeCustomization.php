@@ -14,9 +14,13 @@ class ThemeCustomization
      *
      * @return void
      */
-    public function afterCreate()
+    public function afterCreate($theme)
     {
-        LSCache::purgeTags(['home']);
+        if ($theme->type == "footer_links") {
+            LSCache::purgeAll();
+        } else {
+            LSCache::purgeTags(['home']);
+        }
     }
 
     /**
@@ -24,9 +28,13 @@ class ThemeCustomization
      *
      * @return void
      */
-    public function afterUpdate()
+    public function afterUpdate($theme)
     {
-        LSCache::purgeTags(['home']);
+        if ($theme->type == "footer_links") {
+            LSCache::purgeAll();
+        } else {
+            LSCache::purgeTags(['home']);
+        }
     }
 
     /**

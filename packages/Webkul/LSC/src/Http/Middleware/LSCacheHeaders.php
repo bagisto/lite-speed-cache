@@ -20,11 +20,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         'shop.cms.page',
         'shop.product_or_category.index',
         'shop.home.contact_us',
-        'shop.api.checkout.cart.index',
-        'shop.api.checkout.cart.store',
-        'shop.api.checkout.cart.destroy',
         'shop.search.index',
-        'shop.compare.index',
     ];
 
     /**
@@ -36,14 +32,14 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
      */
     public function handle($request, Closure $next, $guard = 'customer')
     {
-        $response = $next($request);
+        $routeName = $request->route()?->getName();
 
+        $response = $next($request);
+        
         if (
             (bool) config('responsecache.enabled')
             || ! (bool) core()->getConfigData('lsc.configuration.cache_application.active')
         ) {
-            LSCache::purgeAll(false);
-
             return $response;
         }
 
@@ -57,12 +53,16 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return $dynamicCacheResponse;
         }
 
-        $route = $request->route();
+        if ($this->isShopStateRoute($request, $routeName)) {
+            if ($this->shouldInvalidateHomeCache($routeName)) {
+                LSCache::purgeTags(['home', 'home-header']);
+            }
 
-        $routeName = $route?->getName();
+            return $this->setNoCacheHeaders($response);
+        }
 
         if (! in_array($routeName, $this->cacheRoutes, true)) {
-            return $response;
+            return $this->setNoCacheHeaders($response);
         }
 
         $tags = $this->getRouteTags($routeName, $request->getPathInfo());
@@ -174,6 +174,28 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             'shop.api.checkout.cart.store',
             'shop.api.checkout.cart.destroy',
         ], true);
+    }
+
+    /**
+     * Cart endpoints are session-specific and must never be LiteSpeed cached.
+     */
+    private function isShopStateRoute($request, ?string $routeName): bool
+    {
+        return str_starts_with((string) $routeName, 'shop.api.checkout.cart.')
+            || str_starts_with((string) $routeName, 'shop.api.compare.')
+            || str_starts_with((string) $routeName, 'shop.api.customers.account.wishlist.')
+            || $routeName === 'shop.compare.index'
+            || $routeName === 'shop.customers.account.wishlist.index'
+            || $request->is('api/checkout/cart')
+            || $request->is('api/checkout/cart/*')
+            || $request->is('api/compare-items')
+            || $request->is('api/compare-items/*')
+            || $request->is('api/customer/wishlist')
+            || $request->is('api/customer/wishlist/*')
+            || $request->is('checkout/cart')
+            || $request->is('checkout/cart/*')
+            || $request->is('compare')
+            || $request->is('customer/account/wishlist');
     }
 
     /**

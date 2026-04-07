@@ -99,7 +99,7 @@
 
     {!! view_render_event('bagisto.shop.components.layouts.header.mobile.search.before') !!}
 
-    <!-- Search Catalog Form -->
+    <!-- Serach Catalog Form -->
     <form action="{{ route('shop.search.index') }}" class="flex w-full items-center">
         <label
             for="organic-search"
@@ -208,7 +208,7 @@
                             </x-slot>
                         </x-shop::drawer>
 
-                        <!-- Separator -->
+                        <!-- Seperator -->
                         <span class="h-5 w-0.5 bg-zinc-200"></span>
 
                         <!-- Sort Drawer -->
@@ -361,13 +361,6 @@
         <div>
             <div ref="lsc_mobile_container"></div>
         </div>
-    </script>
-
-    <script
-        type="text/x-template"
-        id="v-login-mobile-drawer-template"
-    >
-        <div></div>
     </script>
 
     <script type="module">
