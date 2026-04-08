@@ -121,39 +121,16 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\URLRewrite@beforeDelete',
         ],
 
-        // Cart cache events - for ESI cart caching
         'checkout.cart.add.before' => [
             'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
         ],
 
-        'checkout.cart.add.after' => [
-            'Webkul\LSC\Listeners\CartCache@afterAddToCart',
-        ],
-
         'checkout.cart.update.after' => [
             'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
-            'Webkul\LSC\Listeners\CartCache@afterUpdateCart',
         ],
 
         'checkout.cart.delete.before' => [
             'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
-        ],
-
-        'checkout.cart.delete.after' => [
-            'Webkul\LSC\Listeners\CartCache@afterRemoveFromCart',
-        ],
-
-        'checkout.cart.collect.totals.after' => [
-            'Webkul\LSC\Listeners\CartCache@afterUpdateCart',
-        ],
-
-        // Coupon events
-        'checkout.cart.coupon.apply.after' => [
-            'Webkul\LSC\Listeners\CartCache@afterApplyCoupon',
-        ],
-
-        'checkout.cart.coupon.remove.after' => [
-            'Webkul\LSC\Listeners\CartCache@afterRemoveCoupon',
         ],
     ];
 }

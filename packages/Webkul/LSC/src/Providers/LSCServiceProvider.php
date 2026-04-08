@@ -9,8 +9,6 @@ use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
 use Webkul\LSC\Http\Middleware\PreventCartApiCache;
-use Webkul\LSC\Http\Middleware\EsiCacheMiddleware;
-use Webkul\LSC\Http\Middleware\PrivateCacheMiddleware;
 use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
@@ -40,24 +38,16 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->app->register(EventServiceProvider::class);
 
-        // Register LSC middlewares
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
+
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
         $router->aliasMiddleware('prevent.cart.api.cache', PreventCartApiCache::class);
-        $router->aliasMiddleware('lscache.esi', EsiCacheMiddleware::class);
-        $router->aliasMiddleware('lscache.private', PrivateCacheMiddleware::class);
-
-        // Apply PreventCartApiCache to web middleware group
         $router->prependMiddlewareToGroup('web', PreventCartApiCache::class);
 
-        // Register ESI and API routes
-        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])
-            ->group(__DIR__.'/../Routes/api.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/api.php');
 
-        // Prepend LSC views namespace for shop
         $this->app['view']->prependNamespace('shop', __DIR__.'/../Resources/views/shop');
 
-        // Bind ThemeController
         $this->app->bind(BaseThemeController::class, ThemeController::class);
 
         $this->publishFiles();

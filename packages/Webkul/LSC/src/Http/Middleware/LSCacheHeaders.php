@@ -7,14 +7,11 @@ use Litespeed\LSCache\LSCacheMiddleware as BaseLSCacheMiddleware;
 use LSCache;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\Product\Repositories\ProductRepository;
-use Webkul\LSC\Traits\UserCacheVariation;
 
 class LSCacheHeaders extends BaseLSCacheMiddleware
 {
-    use UserCacheVariation;
-
     /**
-     * Routes eligible for public caching.
+     * Routes eligible for caching.
      *
      * @var array
      */
@@ -24,40 +21,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         'shop.product_or_category.index',
         'shop.home.contact_us',
         'shop.search.index',
-    ];
-
-    /**
-     * Routes that should use private (user-isolated) caching.
-     *
-     * @var array
-     */
-    protected $privateCacheRoutes = [
-        'shop.checkout.cart.index',
-        'shop.api.checkout.cart.index',
-    ];
-
-    /**
-     * Routes that should NEVER be cached (security-sensitive).
-     *
-     * @var array
-     */
-    protected $neverCacheRoutes = [
-        'shop.checkout.onepage.index',
-        'shop.checkout.success',
-        'shop.customer.session.create',
-        'shop.customer.session.store',
-        'shop.customer.session.destroy',
-        'shop.customers.register.index',
-        'shop.customers.register.create',
-    ];
-
-    /**
-     * ESI route prefixes.
-     *
-     * @var array
-     */
-    protected $esiRoutes = [
-        'shop.lsc.esi.',
     ];
 
     /**
@@ -71,9 +34,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     {
         $routeName = $request->route()?->getName();
 
-        // Set vary cookie for user isolation
-        $this->setVaryCookie();
-
         $response = $next($request);
         
         if (
@@ -81,21 +41,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             || ! (bool) core()->getConfigData('lsc.configuration.cache_application.active')
         ) {
             return $response;
-        }
-
-        // Check if this is an ESI route - let ESI middleware handle it
-        if ($this->isEsiRoute($request, $routeName)) {
-            return $response;
-        }
-
-        // Check if this is a never-cache route (checkout, auth, etc.)
-        if ($this->isNeverCacheRoute($request, $routeName)) {
-            return $this->setNoCacheHeaders($response);
-        }
-
-        // Check if this route should use private caching
-        if ($this->isPrivateCacheRoute($request, $routeName)) {
-            return $this->handlePrivateCache($request, $response);
         }
 
         if ($this->isGuestOnlyCacheEnabled($guard)) {
@@ -111,11 +56,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         if ($this->isShopStateRoute($request, $routeName)) {
             if ($this->shouldInvalidateHomeCache($routeName)) {
                 LSCache::purgeTags(['home', 'home-header']);
-            }
-
-            // For cart/wishlist/compare pages, use private cache instead of no-cache
-            if ($this->shouldUsePrivateCache($request, $routeName)) {
-                return $this->handlePrivateCache($request, $response);
             }
 
             return $this->setNoCacheHeaders($response);
@@ -156,10 +96,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $response->headers->set('Cache-Control', $lscacheControl);
         $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
         $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
-        
-        // CRITICAL: Vary by locale and currency for proper translations
-        $response->headers->set('X-LiteSpeed-Vary', $this->getPublicCacheVaryValue());
-        $response->headers->set('Vary', 'Accept-Encoding, Cookie');
 
         return $response;
     }
@@ -330,186 +266,5 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
 
         return $response;
-    }
-
-    /**
-     * Check if this is an ESI route.
-     */
-    private function isEsiRoute($request, ?string $routeName): bool
-    {
-        // Check route name prefix
-        foreach ($this->esiRoutes as $prefix) {
-            if (str_starts_with((string) $routeName, $prefix)) {
-                return true;
-            }
-        }
-
-        // Check URL pattern
-        return $request->is('esi/*') || $request->is('api/esi/*');
-    }
-
-    /**
-     * Check if this route should never be cached (security-sensitive).
-     */
-    private function isNeverCacheRoute($request, ?string $routeName): bool
-    {
-        // Check explicit never-cache routes
-        if ($routeName && in_array($routeName, $this->neverCacheRoutes, true)) {
-            return true;
-        }
-
-        // Check patterns that should never be cached
-        return $request->is('checkout/onepage')
-            || $request->is('checkout/onepage/*')
-            || $request->is('checkout/success')
-            || $request->is('customer/session')
-            || $request->is('customer/session/*')
-            || $request->is('customer/login')
-            || $request->is('customer/logout')
-            || $request->is('customer/register')
-            || $request->is('customer/forgot-password')
-            || $request->is('paypal/*')
-            || $request->is('admin/*');
-    }
-
-    /**
-     * Check if this route should use private caching.
-     */
-    private function isPrivateCacheRoute($request, ?string $routeName): bool
-    {
-        // Only enable if ESI/private cache is configured
-        if (! $this->isEsiEnabled()) {
-            return false;
-        }
-
-        // Check explicit private cache routes
-        if ($routeName && in_array($routeName, $this->privateCacheRoutes, true)) {
-            return true;
-        }
-
-        // Check URL patterns for private cache
-        return $request->is('checkout/cart')
-            || $request->is('api/checkout/cart');
-    }
-
-    /**
-     * Check if route should use private cache (for state routes).
-     */
-    private function shouldUsePrivateCache($request, ?string $routeName): bool
-    {
-        // Only enable if ESI/private cache is configured
-        if (! $this->isEsiEnabled()) {
-            return false;
-        }
-
-        // Cart page, compare, wishlist can use private cache
-        return $request->is('checkout/cart')
-            || $request->is('compare')
-            || $request->is('customer/account/wishlist');
-    }
-
-    /**
-     * Handle private caching for user-isolated content.
-     * 
-     * CRITICAL SECURITY: This method ensures proper user isolation to prevent cache leakage.
-     */
-    private function handlePrivateCache($request, $response)
-    {
-        // Only cache successful GET/HEAD requests
-        if (
-            ! in_array($request->getMethod(), ['GET', 'HEAD'])
-            || $response->getStatusCode() !== 200
-        ) {
-            return $this->setNoCacheHeaders($response);
-        }
-
-        // CRITICAL: Do NOT cache first request (no valid vary cookie)
-        // This prevents cache leakage when vary cookie is being set
-        if ($this->isFirstRequest()) {
-            return $this->setNoCacheHeaders($response);
-        }
-
-        $ttl = $this->getPrivateCacheTTL();
-        $tags = $this->getPrivateCacheTags($request);
-
-        // Set LiteSpeed private cache headers with FULL vary (including session)
-        $response->headers->set('X-LiteSpeed-Cache-Control', "private,max-age={$ttl}");
-        $response->headers->set('X-LiteSpeed-Vary', $this->getPrivateCacheVaryValue());
-        
-        if (! empty($tags)) {
-            $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
-        }
-
-        // Standard cache headers
-        $response->headers->set('Cache-Control', "private, max-age={$ttl}");
-        $response->headers->set('Vary', 'Cookie');
-
-        return $response;
-    }
-
-    /**
-     * Get cache tags for private cache routes.
-     */
-    private function getPrivateCacheTags($request): array
-    {
-        $tags = [$this->getUserCacheTag()];
-
-        if ($request->is('checkout/cart') || $request->is('checkout/cart/*') || $request->is('api/checkout/cart')) {
-            $tags[] = 'cart';
-            $tags[] = 'cart-page';
-        }
-
-        if ($request->is('compare')) {
-            $tags[] = 'compare';
-        }
-
-        if ($request->is('customer/account/wishlist')) {
-            $tags[] = 'wishlist';
-        }
-
-        return $tags;
-    }
-
-    /**
-     * Get vary value for public cache routes.
-     * MUST include locale and currency cookies for proper translations.
-     *
-     * @return string
-     */
-    private function getPublicCacheVaryValue(): string
-    {
-        $sessionCookie = $this->getSessionCookieName();
-        
-        // Include session cookie for user state awareness + locale + currency
-        return "cookie={$sessionCookie},cookie=bagisto_locale,cookie=bagisto_currency";
-    }
-
-    /**
-     * Get vary value for private cache routes.
-     * Includes user isolation + session + locale + currency.
-     * 
-     * CRITICAL SECURITY: laravel_session MUST be included to prevent cross-user cache leakage.
-     *
-     * @return string
-     */
-    private function getPrivateCacheVaryValue(): string
-    {
-        $varyKey = $this->getVaryCookieName();
-        $sessionCookie = $this->getSessionCookieName();
-        
-        // CRITICAL: Include BOTH lsc_vary_key AND laravel_session for proper isolation
-        // This ensures cache is unique per user AND per session
-        return "cookie={$varyKey},cookie={$sessionCookie},cookie=bagisto_locale,cookie=bagisto_currency";
-    }
-
-    /**
-     * Check if this is the first request (no vary cookie exists).
-     * First requests should NOT be cached to prevent cache leakage.
-     *
-     * @return bool
-     */
-    private function isFirstRequest(): bool
-    {
-        return ! $this->hasValidVaryCookie();
     }
 }

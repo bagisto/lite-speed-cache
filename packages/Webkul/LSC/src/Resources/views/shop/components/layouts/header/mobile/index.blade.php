@@ -54,8 +54,6 @@
                 {!! view_render_event('bagisto.shop.components.layouts.header.mobile.mini_cart.before') !!}
 
                 @if(core()->getConfigData('sales.checkout.shopping_cart.cart_page'))
-                    {{-- Always use standard mini-cart for proper UI/UX --}}
-                    {{-- ESI caching is handled at the API level, not UI level --}}
                     @include('shop::checkout.cart.mini-cart')
                 @endif
 
