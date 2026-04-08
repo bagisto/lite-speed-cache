@@ -5,13 +5,11 @@ namespace Webkul\LSC\Providers;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
 use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
+use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
-use Webkul\LSC\Http\Middleware\PreventCartApiCache;
-use Webkul\Shop\Http\Controllers\API\CartController;
-use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
-use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 
 class LSCServiceProvider extends ServiceProvider
 {
@@ -41,8 +39,6 @@ class LSCServiceProvider extends ServiceProvider
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
 
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
-        $router->aliasMiddleware('prevent.cart.api.cache', PreventCartApiCache::class);
-        $router->prependMiddlewareToGroup('web', PreventCartApiCache::class);
 
         Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/api.php');
 
@@ -59,11 +55,15 @@ class LSCServiceProvider extends ServiceProvider
      */
     protected function disableOtherCaches(): void
     {
-        // Disable Laravel Response Cache when LSC package is installed
+        /**
+         * Disable Laravel Response Cache when LSC package is installed
+         */
         config(['responsecache.enabled' => false]);
 
-        // Disable any other application-level caching that might conflict
-        config(['cache.default' => 'array']);
+        /**
+         * Disable any other application-level caching that might conflict
+         */
+        // config(['cache.default' => 'array']);
     }
 
     /**
@@ -100,7 +100,7 @@ class LSCServiceProvider extends ServiceProvider
 
             __DIR__.'/../Routes/shop/store-front-routes.php' => __DIR__.'/../../../Shop/src/Routes/store-front-routes.php',
 
-            // __DIR__.'/../Resources/views/shop/components/layouts/header' => resource_path('themes/default/views/components/layouts/header'),
+            __DIR__.'/../Resources/views/shop/components/layouts/header' => resource_path('themes/default/views/components/layouts/header'),
         ]);
     }
 }

@@ -11,20 +11,18 @@ use Webkul\Shop\Http\Controllers\ProductController;
 use Webkul\Shop\Http\Controllers\ProductsCategoriesProxyController;
 use Webkul\Shop\Http\Controllers\SearchController;
 use Webkul\Shop\Http\Controllers\SubscriptionController;
-use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
-
 
 /**
  * Store front cart.
  */
 Route::get('api/checkout/cart', [CartController::class, 'index'])
     ->name('shop.api.checkout.cart.index')
-    ->middleware(['no.lscache', DoNotCacheResponse::class, NoLiteSpeedCache::class]);
+    ->middleware(['no.lscache', DoNotCacheResponse::class]);
 
 /**
  * CMS pages.
  */
-Route::middleware(['lscache.response', 'cache.response'])->group(function () {
+Route::middleware(['lscache.response'])->group(function () {
     Route::get('page/{slug}', [PageController::class, 'view'])
         ->name('shop.cms.page');
 
@@ -66,8 +64,7 @@ Route::middleware(['lscache.response', 'cache.response'])->group(function () {
  * Contact us form submit route.
  */
 Route::post('contact-us/send-mail', [HomeController::class, 'sendContactUsMail'])
-    ->name('shop.home.contact_us.send_mail')
-    ->middleware('cache.response');
+    ->name('shop.home.contact_us.send_mail');
 
 /**
  * Search upload route.

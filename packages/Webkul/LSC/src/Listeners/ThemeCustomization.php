@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Litespeed\LSCache\LSCache;
 use Webkul\LSC\Traits\DeletesAllCache;
 
 class ThemeCustomization
@@ -16,7 +16,7 @@ class ThemeCustomization
      */
     public function afterCreate($theme)
     {
-        if ($theme->type == "footer_links") {
+        if ($theme->type == 'footer_links') {
             LSCache::purgeAll();
         } else {
             LSCache::purgeTags(['home']);
@@ -30,7 +30,7 @@ class ThemeCustomization
      */
     public function afterUpdate($theme)
     {
-        if ($theme->type == "footer_links") {
+        if ($theme->type == 'footer_links') {
             LSCache::purgeAll();
         } else {
             LSCache::purgeTags(['home']);

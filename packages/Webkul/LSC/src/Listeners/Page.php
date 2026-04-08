@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Litespeed\LSCache\LSCache;
 use Webkul\CMS\Repositories\PageRepository;
 
 class Page

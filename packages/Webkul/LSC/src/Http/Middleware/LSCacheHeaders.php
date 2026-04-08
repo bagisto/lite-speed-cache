@@ -3,8 +3,8 @@
 namespace Webkul\LSC\Http\Middleware;
 
 use Closure;
+use Litespeed\LSCache\LSCache;
 use Litespeed\LSCache\LSCacheMiddleware as BaseLSCacheMiddleware;
-use LSCache;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\Product\Repositories\ProductRepository;
 
@@ -35,7 +35,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $routeName = $request->route()?->getName();
 
         $response = $next($request);
-        
+
         if (
             (bool) config('responsecache.enabled')
             || ! (bool) core()->getConfigData('lsc.configuration.cache_application.active')
@@ -67,7 +67,9 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
 
         $tags = $this->getRouteTags($routeName, $request->getPathInfo());
 
-        // Invalidate home cache for certain actions.
+        /**
+         * Invalidate home cache for certain actions.
+         */
         if ($this->shouldInvalidateHomeCache($routeName)) {
             LSCache::purgeTags(['home', 'home-header']);
 
@@ -77,12 +79,16 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $lsCacheTTL = $this->getCacheTTL();
         $lscacheControl = $this->getCacheControlHeader($lsCacheTTL);
 
-        // Set no-cache headers if no tags or ttl is 0.
+        /**
+         * Set no-cache headers if no tags or ttl is 0.
+         */
         if ($this->shouldSetNoCache($tags, $lsCacheTTL)) {
             return $this->setNoCacheHeaders($response);
         }
 
-        // Set LiteSpeed Cache headers.
+        /**
+         * Set LiteSpeed Cache headers.
+         */
         if (
             ! (
                 in_array($request->getMethod(), ['GET', 'HEAD'])
@@ -118,9 +124,15 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $method = $request->getMethod();
 
         $isProductOrCategory = $routeName === 'shop.product_or_category.index' && in_array($method, ['GET', 'HEAD']);
+
         $isHomePage = $routeName === 'shop.home.index' && in_array($method, ['GET', 'HEAD']);
 
-        if (! ($isProductOrCategory || $isHomePage)) {
+        if (
+            ! (
+                $isProductOrCategory 
+                || $isHomePage
+            )
+        ) {
             return null;
         }
 
@@ -253,7 +265,10 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return ['product_'.$slug];
         }
 
-        return ['slug_'.$slug]; // fallback
+        /**
+         * fallback to slug tag for any other route that uses this method, e.g. layered navigation categories
+         */
+        return ['slug_'.$slug];
     }
 
     /**

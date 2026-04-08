@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Litespeed\LSCache\LSCache;
 use Spatie\ResponseCache\Facades\ResponseCache;
 use Webkul\LSC\Traits\DeletesAllCache;
 
@@ -36,7 +36,7 @@ class CustomerSession
 
         LSCache::purgeTags(['home', 'home-header']);
         LSCache::purgeItems(['/api/checkout/cart']);
-        
+
         ResponseCache::forget('/api/checkout/cart');
     }
 }

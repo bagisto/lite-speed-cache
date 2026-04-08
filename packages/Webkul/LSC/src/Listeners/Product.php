@@ -2,7 +2,8 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Illuminate\Support\Facades\Log;
+use Litespeed\LSCache\LSCache;
 use Webkul\LSC\Traits\DeletesAllCache;
 use Webkul\Product\Repositories\ProductBundleOptionProductRepository;
 use Webkul\Product\Repositories\ProductGroupedProductRepository;
@@ -31,9 +32,16 @@ class Product
      */
     public function afterCreate($product)
     {
-        LSCache::purgeTags(['home']);
+        try {
+            LSCache::purgeTags(['home']);
 
-        $this->deletePrivCache();
+            $this->deletePrivCache();
+        } catch (\Throwable $e) {
+            Log::error('LSCache: Failed to purge cache after product creation', [
+                'product_id' => $product->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -44,9 +52,18 @@ class Product
      */
     public function afterUpdate($product)
     {
-        $urls = $this->getForgettableUrls($product);
+        try {
+            $urls = $this->getForgettableUrls($product);
 
-        LSCache::purgeTags($urls);
+            if (! empty($urls)) {
+                LSCache::purgeTags($urls);
+            }
+        } catch (\Throwable $e) {
+            Log::error('LSCache: Failed to purge cache after product update', [
+                'product_id' => $product->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -57,11 +74,25 @@ class Product
      */
     public function beforeDelete($productId)
     {
-        $product = $this->productRepository->find($productId);
+        try {
+            $product = $this->productRepository->find($productId);
 
-        $urls = $this->getForgettableUrls($product);
+            if (! $product) {
+                Log::warning('LSCache: Product not found for cache deletion', ['product_id' => $productId]);
+                return;
+            }
 
-        LSCache::purgeTags($urls);
+            $urls = $this->getForgettableUrls($product);
+
+            if (! empty($urls)) {
+                LSCache::purgeTags($urls);
+            }
+        } catch (\Throwable $e) {
+            Log::error('LSCache: Failed to purge cache before product deletion', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

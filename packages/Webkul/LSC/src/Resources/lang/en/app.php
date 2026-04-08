@@ -20,6 +20,8 @@ return [
                         'default-ttl-info' => 'Set the default time to live for cached items in seconds <a class="text-blue-600 hover:underline" href="https://docs.litespeedtech.com/lscache/lsclaravel/settings/#cache-control" target="_blank">More Info</a>.',
                         'guest-only'       => 'Guest Only',
                         'guest-only-info'  => 'Enable caching only for guest users. If disabled, caching will be applied to all users.',
+                        'cache-path'       => 'Cache Path',
+                        'cache-path-info'  => 'Full path to LiteSpeed private cache directory. Default: /usr/local/lsws/cachedata/priv (Enterprise) or /tmp/lshttpd/lscache (OpenLiteSpeed).',
                     ],
                 ],
             ],

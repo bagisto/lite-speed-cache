@@ -2,9 +2,9 @@
 
 namespace Webkul\LSC\Http\Controllers\Admin\Settings;
 
-use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
+use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
 use Webkul\Admin\Http\Requests\MassDestroyRequest;
 use Webkul\Admin\Http\Requests\MassUpdateRequest;
 use Webkul\Theme\Repositories\ThemeCustomizationRepository;
@@ -18,6 +18,9 @@ class ThemeController extends BaseThemeController
      */
     public function __construct(public ThemeCustomizationRepository $themeCustomizationRepository) {}
 
+    /**
+     * Mass update the specified resource in storage.
+     */
     public function massUpdate(MassUpdateRequest $massUpdateRequest): JsonResponse
     {
         $selectedThemeIds = $massUpdateRequest->input('indices');

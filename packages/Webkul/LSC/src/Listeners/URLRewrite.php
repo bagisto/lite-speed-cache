@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Litespeed\LSCache\LSCache;
 use Webkul\Marketing\Repositories\URLRewriteRepository;
 
 class URLRewrite

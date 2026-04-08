@@ -2,7 +2,8 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Illuminate\Support\Facades\Log;
+use Litespeed\LSCache\LSCache;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\LSC\Traits\DeletesAllCache;
 
@@ -25,14 +26,36 @@ class Category
      */
     public function afterUpdate($category)
     {
-        foreach (core()->getAllLocales() as $locale) {
-            if ($categoryTranslation = $category->translate($locale->code)) {
-                LSCache::purgeTags(['category_'.$categoryTranslation->slug]);
+        try {
+            $tags = [];
+
+            foreach (core()->getAllLocales() as $locale) {
+                $categoryTranslation = $category->translate($locale->code);
+                
+                if ($categoryTranslation && !empty($categoryTranslation->slug)) {
+                    $tags[] = 'category_'.$categoryTranslation->slug;
+                }
+            }
+
+            $defaultTranslation = $category->translate(core()->getDefaultLocaleCodeFromDefaultChannel());
+            
+            if (
+                $defaultTranslation 
+                && ! empty($defaultTranslation->slug)
+            ) {
+                $tags[] = 'category_'.$defaultTranslation->slug;
+            }
+
+            if (! empty($tags)) {
+                LSCache::purgeTags(array_unique($tags));
 
                 $this->deletePrivCache();
             }
-
-            LSCache::purgeTags(['category_'.$category->translate(core()->getDefaultLocaleCodeFromDefaultChannel())->slug]);
+        } catch (\Throwable $e) {
+            Log::error('LSCache: Failed to purge cache after category update', [
+                'category_id' => $category->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -44,16 +67,44 @@ class Category
      */
     public function beforeDelete($categoryId)
     {
-        $category = $this->categoryRepository->find($categoryId);
+        try {
+            $category = $this->categoryRepository->find($categoryId);
 
-        foreach (core()->getAllLocales() as $locale) {
-            if ($categoryTranslation = $category->translate($locale->code)) {
-                LSCache::purgeTags(['category_'.$categoryTranslation->slug]);
+            if (! $category) {
+                Log::warning('LSCache: Category not found for cache deletion', ['category_id' => $categoryId]);
+                
+                return;
+            }
+
+            $tags = [];
+
+            foreach (core()->getAllLocales() as $locale) {
+                $categoryTranslation = $category->translate($locale->code);
+                
+                if ($categoryTranslation && !empty($categoryTranslation->slug)) {
+                    $tags[] = 'category_'.$categoryTranslation->slug;
+                }
+            }
+
+            $defaultTranslation = $category->translate(core()->getDefaultLocaleCodeFromDefaultChannel());
+
+            if (
+                $defaultTranslation 
+                && ! empty($defaultTranslation->slug)
+            ) {
+                $tags[] = 'category_'.$defaultTranslation->slug;
+            }
+
+            if (! empty($tags)) {
+                LSCache::purgeTags(array_unique($tags));
 
                 $this->deletePrivCache();
             }
-
-            LSCache::purgeTags(['category_'.$category->translate(core()->getDefaultLocaleCodeFromDefaultChannel())->slug]);
+        } catch (\Throwable $e) {
+            Log::error('LSCache: Failed to purge cache before category deletion', [
+                'category_id' => $categoryId,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }
