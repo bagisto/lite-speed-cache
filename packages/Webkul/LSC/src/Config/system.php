@@ -35,14 +35,7 @@ return [
                 'validation' => 'required_if:active,1|integer|min:0|max:86400',
                 'default'    => 3600,
             ], [
-                'name'       => 'guest_only',
-                'title'      => 'lsc::app.configuration.index.lsc.configuration.cache-application.guest-only',
-                'info'       => 'lsc::app.configuration.index.lsc.configuration.cache-application.guest-only-info',
-                'type'       => 'boolean',
-                'depends'    => 'active:1',
-                'validation' => 'required_if:active,1',
-                'default'    => true,
-            ], [
+
                 'name'       => 'cache_path',
                 'title'      => 'lsc::app.configuration.index.lsc.configuration.cache-application.cache-path',
                 'info'       => 'lsc::app.configuration.index.lsc.configuration.cache-application.cache-path-info',
