@@ -16,9 +16,11 @@ class LoginContentController extends APIController
         try {
             $html = view($viewName)->render();
 
-            return response()->json([
+            $response = response()->json([
                 'data' => $html,
             ], Response::HTTP_OK);
+
+            return $this->withCacheHeaders($response, $viewName);
         } catch (\Throwable $e) {
             return response()->json([
                 'error'   => 'Unable to render view: '.$viewName,
@@ -49,5 +51,25 @@ class LoginContentController extends APIController
     public function getLoginMobileDrawerHtml(): JsonResponse
     {
         return $this->renderLoginContent('lsc::shop.home.login-mobile-drawer');
+    }
+
+    /**
+     * Add LiteSpeed cache headers to login fragment responses.
+     */
+    private function withCacheHeaders(JsonResponse $response, string $viewName): JsonResponse
+    {
+        $tags = match ($viewName) {
+            'lsc::shop.home.login-desktop-dropdown' => ['login', 'login-desktop-dropdown'],
+            'lsc::shop.home.login-mobile-dropdown'  => ['login', 'login-mobile-dropdown'],
+            'lsc::shop.home.login-mobile-drawer'    => ['login', 'login-mobile-drawer'],
+            default                                 => ['login'],
+        };
+
+        $response->headers->set('Cache-Control', 'private, max-age=300, must-revalidate');
+        $response->headers->set('X-LiteSpeed-Cache-Control', 'private, max-age=300');
+        $response->headers->set('X-LiteSpeed-Vary', 'cookie=laravel_session');
+        $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
+
+        return $response;
     }
 }

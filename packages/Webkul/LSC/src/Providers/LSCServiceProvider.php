@@ -10,6 +10,7 @@ use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
+use Webkul\LSC\Http\Middleware\PreventCartApiCache;
 
 class LSCServiceProvider extends ServiceProvider
 {
@@ -36,9 +37,15 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->app->register(EventServiceProvider::class);
 
+        $router->prependMiddlewareToGroup('web', NoLiteSpeedCache::class);
+        $router->prependMiddlewareToGroup('api', NoLiteSpeedCache::class);
+
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
 
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
+
+        $router->aliasMiddleware('prevent.cart.api.cache', PreventCartApiCache::class);
+        $router->prependMiddlewareToGroup('web', PreventCartApiCache::class);
 
         Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/api.php');
 
