@@ -31,6 +31,10 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\Category@afterUpdate',
         ],
 
+        'catalog.category.update.before' => [
+            'Webkul\LSC\Listeners\Category@beforeUpdate',
+        ],
+
         'catalog.category.update.after' => [
             'Webkul\LSC\Listeners\Category@afterUpdate',
         ],

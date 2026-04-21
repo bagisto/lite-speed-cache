@@ -34,7 +34,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     public function handle($request, Closure $next, $guard = 'customer')
     {
         $routeName = $request->route()?->getName();
-        $tags = $this->getRouteTags($request, $routeName, $request->getPathInfo());
 
         $response = $next($request);
         
@@ -45,7 +44,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return $response;
         }
 
-        $dynamicCacheResponse = $this->handleDynamicCache($request, $response, $tags);
+        $dynamicCacheResponse = $this->handleDynamicCache($request, $response);
 
         if ($dynamicCacheResponse !== null) {
             return $dynamicCacheResponse;
@@ -62,6 +61,8 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         if (! in_array($routeName, $this->cacheRoutes, true)) {
             return $this->setNoCacheHeaders($response);
         }
+
+        $tags = $this->getRouteTags($routeName, $request->getPathInfo());
 
         // Invalidate home cache for certain actions.
         if ($this->shouldInvalidateHomeCache($routeName)) {
@@ -89,7 +90,11 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return $this->setNoCacheHeaders($response);
         }
 
-        $this->setCacheHeaders($response, $tags, $lscacheControl);
+        // For browsers: prevent caching of dynamic HTML (avoids stale content)
+        // For LiteSpeed: enable server-side caching
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+        $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
+        $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
 
         return $response;
     }
@@ -97,7 +102,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     /**
      * Handle dynamic cache for product/category/home.
      */
-    private function handleDynamicCache($request, $response, array $tags)
+    private function handleDynamicCache($request, $response)
     {
         $route = $request->route();
         $routeName = $route?->getName();
@@ -122,10 +127,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             && $controllerData
             && $cachedData == $controllerData
         ) {
-            $cachedResponse = response()->json($cachedData);
-            $this->setCacheHeaders($cachedResponse, $tags, $this->getCacheControlHeader($this->getCacheTTL()));
-
-            return $cachedResponse;
+            return response()->json($cachedData);
         } elseif ($controllerData) {
             cache()->put($cacheKey, $controllerData, now()->addMinutes(10));
 
@@ -138,7 +140,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     /**
      * Get tags for the current route.
      */
-    private function getRouteTags($request, $routeName, $routePathInfo): array
+    private function getRouteTags($routeName, $routePathInfo): array
     {
         $slug = urldecode(trim($routePathInfo, '/'));
         $lastSegment = last(explode('/', $routePathInfo));
@@ -148,31 +150,10 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             'shop.cms.page'                  => ["page_$lastSegment"],
             'shop.product_or_category.index' => $this->getProductOrCategoryTags($slug),
             'shop.home.contact_us'           => ['contact'],
-            'shop.search.index'              => array_merge(['search'], $this->getCategoryTagsFromRequest($request)),
+            'shop.search.index'              => ['search'],
             'shop.compare.index'             => ['compare'],
             default                          => [],
         };
-    }
-
-    /**
-     * Get category tags from request parameters.
-     */
-    private function getCategoryTagsFromRequest($request): array
-    {
-        $categoryId = (int) $request->query('category_id');
-
-        if (! $categoryId) {
-            return [];
-        }
-
-        $tags = ['category_id_'.$categoryId];
-        $category = app(CategoryRepository::class)->find($categoryId);
-
-        if ($category?->slug) {
-            $tags[] = 'category_'.$category->slug;
-        }
-
-        return $tags;
     }
 
     /**
@@ -240,10 +221,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     private function getProductOrCategoryTags(string $slug): array
     {
         if ($category = app(CategoryRepository::class)->findBySlug($slug)) {
-            return [
-                'category_'.$slug,
-                'category_id_'.$category->id,
-            ];
+            return ['category_'.$slug];
         }
 
         if (core()->getConfigData('catalog.products.search.engine') == 'elastic') {
@@ -263,10 +241,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
                 abort(404);
             }
 
-            return [
-                'product_'.$slug,
-                'product_id_'.$product->id,
-            ];
+            return ['product_'.$slug];
         }
 
         return ['slug_'.$slug]; // fallback
@@ -280,47 +255,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
         $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
-        $response->headers->remove('X-LiteSpeed-Tag');
 
         return $response;
-    }
-
-    /**
-     * Apply cache headers and make the tag list visible to the browser.
-     */
-    private function setCacheHeaders($response, array $tags, string $cacheControl): void
-    {
-        $tagList = implode(',', $this->normalizeTags(array_merge(
-            $this->getExistingTags($response->headers->get('X-LiteSpeed-Tag')),
-            $tags
-        )));
-
-        $response->headers->set('Cache-Control', $cacheControl);
-        $response->headers->set('X-LiteSpeed-Cache-Control', $cacheControl);
-        $response->headers->set('X-LiteSpeed-Tag', $tagList);
-    }
-
-    /**
-     * Parse existing tag header.
-     */
-    private function getExistingTags(?string $headerValue): array
-    {
-        if (! $headerValue) {
-            return [];
-        }
-
-        return array_map('trim', explode(',', $headerValue));
-    }
-
-    /**
-     * Normalize tag values.
-     */
-    private function normalizeTags(array $tags): array
-    {
-        $tags = array_map(function ($tag) {
-            return preg_replace('/[^A-Za-z0-9_\-]/', '_', (string) $tag);
-        }, array_filter($tags));
-
-        return array_values(array_unique(array_filter($tags)));
     }
 }

@@ -5,12 +5,13 @@ namespace Webkul\LSC\Providers;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Webkul\Admin\Http\Controllers\Catalog\CategoryController as BaseCategoryController;
 use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
 use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
+use Webkul\LSC\Http\Controllers\Admin\Catalog\CategoryController;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
-use Webkul\LSC\Http\Middleware\PreventCartApiCache;
 
 class LSCServiceProvider extends ServiceProvider
 {
@@ -37,20 +38,15 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->app->register(EventServiceProvider::class);
 
-        $router->prependMiddlewareToGroup('web', NoLiteSpeedCache::class);
-        $router->prependMiddlewareToGroup('api', NoLiteSpeedCache::class);
-
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
 
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
-
-        $router->aliasMiddleware('prevent.cart.api.cache', PreventCartApiCache::class);
-        $router->prependMiddlewareToGroup('web', PreventCartApiCache::class);
 
         Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/api.php');
 
         $this->app['view']->prependNamespace('shop', __DIR__.'/../Resources/views/shop');
 
+        $this->app->bind(BaseCategoryController::class, CategoryController::class);
         $this->app->bind(BaseThemeController::class, ThemeController::class);
 
         $this->publishFiles();

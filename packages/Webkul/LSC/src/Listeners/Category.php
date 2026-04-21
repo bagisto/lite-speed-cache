@@ -5,11 +5,15 @@ namespace Webkul\LSC\Listeners;
 use Illuminate\Support\Facades\Log;
 use Litespeed\LSCache\LSCache;
 use Webkul\Category\Repositories\CategoryRepository;
-use Webkul\LSC\Traits\DeletesAllCache;
 
 class Category
 {
-    use DeletesAllCache;
+    /**
+     * Track pre-update slugs so old category URLs/tags can be purged too.
+     *
+     * @var array<int, array<int, string>>
+     */
+    private static array $oldSlugsByCategoryId = [];
 
     /**
      * Create a new listener instance.
@@ -17,6 +21,20 @@ class Category
      * @return void
      */
     public function __construct(protected CategoryRepository $categoryRepository) {}
+
+    /**
+     * Capture the category slugs before update so old cached URLs can be purged.
+     */
+    public function beforeUpdate($categoryId): void
+    {
+        $category = $this->categoryRepository->find($categoryId);
+
+        if (! $category) {
+            return;
+        }
+
+        self::$oldSlugsByCategoryId[$categoryId] = $this->getCategorySlugs($category);
+    }
 
     /**
      * After category update
@@ -27,30 +45,14 @@ class Category
     public function afterUpdate($category)
     {
         try {
-            $tags = [];
-
-            foreach (core()->getAllLocales() as $locale) {
-                $categoryTranslation = $category->translate($locale->code);
-                
-                if ($categoryTranslation && !empty($categoryTranslation->slug)) {
-                    $tags[] = 'category_'.$categoryTranslation->slug;
-                }
-            }
-
-            $defaultTranslation = $category->translate(core()->getDefaultLocaleCodeFromDefaultChannel());
-            
-            if (
-                $defaultTranslation 
-                && ! empty($defaultTranslation->slug)
-            ) {
-                $tags[] = 'category_'.$defaultTranslation->slug;
-            }
+            $oldSlugs = self::$oldSlugsByCategoryId[$category->id] ?? [];
+            $tags = $this->getCategoryTags($category, $oldSlugs);
 
             if (! empty($tags)) {
-                LSCache::purgeTags(array_unique($tags));
-
-                $this->deletePrivCache();
+                LSCache::purgeTags($tags, false);
             }
+
+            unset(self::$oldSlugsByCategoryId[$category->id]);
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache after category update', [
                 'category_id' => $category->id ?? null,
@@ -76,29 +78,10 @@ class Category
                 return;
             }
 
-            $tags = [];
-
-            foreach (core()->getAllLocales() as $locale) {
-                $categoryTranslation = $category->translate($locale->code);
-                
-                if ($categoryTranslation && !empty($categoryTranslation->slug)) {
-                    $tags[] = 'category_'.$categoryTranslation->slug;
-                }
-            }
-
-            $defaultTranslation = $category->translate(core()->getDefaultLocaleCodeFromDefaultChannel());
-
-            if (
-                $defaultTranslation 
-                && ! empty($defaultTranslation->slug)
-            ) {
-                $tags[] = 'category_'.$defaultTranslation->slug;
-            }
+            $tags = $this->getCategoryTags($category);
 
             if (! empty($tags)) {
-                LSCache::purgeTags(array_unique($tags));
-
-                $this->deletePrivCache();
+                LSCache::purgeTags($tags, false);
             }
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache before category deletion', [
@@ -106,5 +89,49 @@ class Category
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Resolve all LiteSpeed tags that can contain category-specific content.
+     */
+    private function getCategoryTags($category, array $extraSlugs = []): array
+    {
+        $tags = ['category_id_'.$category->id, 'category-products_'.$category->id];
+
+        foreach (array_unique(array_merge($this->getCategorySlugs($category), $extraSlugs)) as $slug) {
+            if (! empty($slug)) {
+                $tags[] = 'category_'.$slug;
+                $tags[] = 'slug_'.$slug;
+            }
+        }
+
+        return array_values(array_unique(array_filter($tags)));
+    }
+
+    /**
+     * Collect all known slugs for a category across locales.
+     */
+    private function getCategorySlugs($category): array
+    {
+        $slugs = [];
+
+        foreach (core()->getAllLocales() as $locale) {
+            $categoryTranslation = $category->translate($locale->code);
+
+            if ($categoryTranslation && ! empty($categoryTranslation->slug)) {
+                $slugs[] = $categoryTranslation->slug;
+            }
+        }
+
+        $defaultTranslation = $category->translate(core()->getDefaultLocaleCodeFromDefaultChannel());
+
+        if (
+            $defaultTranslation
+            && ! empty($defaultTranslation->slug)
+        ) {
+            $slugs[] = $defaultTranslation->slug;
+        }
+
+        return array_values(array_unique(array_filter($slugs)));
     }
 }
