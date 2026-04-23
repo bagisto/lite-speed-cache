@@ -6,6 +6,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Event;
 use Webkul\Admin\Http\Controllers\Catalog\CategoryController as BaseCategoryController;
 use Webkul\Admin\Http\Requests\CategoryRequest;
+use Webkul\LSC\Support\LiteSpeedDebug;
 
 class CategoryController extends BaseCategoryController
 {
@@ -34,7 +35,13 @@ class CategoryController extends BaseCategoryController
         session()->flash('success', trans('admin::app.catalog.categories.update-success'));
 
         $response = redirect()->route('admin.catalog.categories.index');
-        $response->headers->set('X-LiteSpeed-Purge', $this->buildCategoryPurgeHeader($category));
+        $categoryTags = $this->getCategoryTags($category);
+        $categoryUrls = $this->getCategoryUrls($category);
+
+        $response->headers->set('X-LiteSpeed-Purge', $this->buildCategoryPurgeHeader($categoryTags, $categoryUrls));
+
+        LiteSpeedDebug::recordPurgeTags($categoryTags);
+        LiteSpeedDebug::recordPurgeUrls($categoryUrls);
 
         return $response;
     }
@@ -42,16 +49,16 @@ class CategoryController extends BaseCategoryController
     /**
      * Build one purge header containing both tag and exact-url purges.
      */
-    private function buildCategoryPurgeHeader($category): string
+    private function buildCategoryPurgeHeader(array $tags, array $urls): string
     {
         $parts = array_merge(
             array_map(
                 fn ($tag) => 'tag='.$tag,
-                $this->getCategoryTags($category)
+                $tags
             ),
             array_map(
                 fn ($url) => 'url='.$url,
-                $this->getCategoryUrls($category)
+                $urls
             )
         );
 
@@ -63,29 +70,7 @@ class CategoryController extends BaseCategoryController
      */
     private function getCategoryTags($category): array
     {
-        $tags = [
-            'categories',
-            'categories-tree',
-            'categories-max-price',
-            'category_id_'.$category->id,
-            'category-products_'.$category->id,
-        ];
-
-        foreach (core()->getAllLocales() as $locale) {
-            $categoryTranslation = $category->translate($locale->code);
-
-            if ($categoryTranslation && ! empty($categoryTranslation->slug)) {
-                $tags[] = 'category_'.$categoryTranslation->slug;
-            }
-        }
-
-        $defaultTranslation = $category->translate(core()->getDefaultLocaleCodeFromDefaultChannel());
-
-        if ($defaultTranslation && ! empty($defaultTranslation->slug)) {
-            $tags[] = 'category_'.$defaultTranslation->slug;
-        }
-
-        return array_values(array_unique(array_filter($tags)));
+        return ['category_'.$category->id];
     }
 
     /**

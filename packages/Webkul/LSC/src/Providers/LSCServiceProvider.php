@@ -38,6 +38,8 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->app->register(EventServiceProvider::class);
 
+        Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-routes.php');
+
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
 
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
@@ -50,6 +52,10 @@ class LSCServiceProvider extends ServiceProvider
         $this->app->bind(BaseThemeController::class, ThemeController::class);
 
         $this->publishFiles();
+
+        if (core()->getConfigData('lsc.configuration.cache_application.active')) {
+            $this->manageConfigMenus();
+        }
     }
 
     /**
@@ -81,6 +87,17 @@ class LSCServiceProvider extends ServiceProvider
     }
 
     /**
+     * Manage the configuration of admin and supplier menus.
+     */
+    private function manageConfigMenus(): void
+    {
+        $this->mergeConfigFrom(
+            dirname(__DIR__).'/Config/admin/menu.php',
+            'menu.admin'
+        );
+    }
+
+    /**
      * Register the Installer Commands of this package.
      */
     protected function registerCommands(): void
@@ -100,6 +117,8 @@ class LSCServiceProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__.'/../Routes/admin/web.php' => __DIR__.'/../../../Admin/src/Routes/web.php',
+
+            __DIR__.'/../Routes/shop/api.php' => __DIR__.'/../../../Shop/src/Routes/api.php',
 
             __DIR__.'/../Routes/shop/store-front-routes.php' => __DIR__.'/../../../Shop/src/Routes/store-front-routes.php',
 

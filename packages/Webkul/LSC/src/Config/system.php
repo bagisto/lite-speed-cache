@@ -35,6 +35,13 @@ return [
                 'validation' => 'required_if:active,1|integer|min:0|max:86400',
                 'default'    => 3600,
             ], [
+                'name'    => 'debug_mode',
+                'title'   => 'lsc::app.configuration.index.lsc.configuration.cache-application.debug-mode',
+                'info'    => 'lsc::app.configuration.index.lsc.configuration.cache-application.debug-mode-info',
+                'type'    => 'boolean',
+                'depends' => 'active:1',
+                'default' => false,
+            ], [
 
                 'name'       => 'cache_path',
                 'title'      => 'lsc::app.configuration.index.lsc.configuration.cache-application.cache-path',

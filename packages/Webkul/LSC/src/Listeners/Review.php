@@ -2,15 +2,11 @@
 
 namespace Webkul\LSC\Listeners;
 
-use Illuminate\Support\Facades\Log;
-use Litespeed\LSCache\LSCache;
-use Webkul\LSC\Traits\DeletesAllCache;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 use Webkul\Product\Repositories\ProductReviewRepository;
 
 class Review
 {
-    use DeletesAllCache;
-
     /**
      * Create a new listener instance.
      *
@@ -26,7 +22,7 @@ class Review
      */
     public function afterUpdate($review)
     {
-        $this->deletePrivCache();
+        LSCache::purgeTags(['product_'.$review->product->id]);
     }
 
     /**
@@ -37,8 +33,8 @@ class Review
      */
     public function beforeDelete($reviewId)
     {
-        $this->productReviewRepository->find($reviewId);
+        $review = $this->productReviewRepository->find($reviewId);
 
-        $this->deletePrivCache();
+        LSCache::purgeTags(['product_'.$review->product->id]);
     }
 }

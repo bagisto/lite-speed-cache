@@ -3,7 +3,7 @@
 namespace Webkul\LSC\Listeners;
 
 use Illuminate\Support\Facades\Log;
-use Litespeed\LSCache\LSCache;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 use Webkul\LSC\Traits\DeletesAllCache;
 use Webkul\Product\Repositories\ProductBundleOptionProductRepository;
 use Webkul\Product\Repositories\ProductGroupedProductRepository;
@@ -39,7 +39,7 @@ class Product
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache after product creation', [
                 'product_id' => $product->id ?? null,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
     }
@@ -61,7 +61,7 @@ class Product
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache after product update', [
                 'product_id' => $product->id ?? null,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
     }
@@ -79,6 +79,7 @@ class Product
 
             if (! $product) {
                 Log::warning('LSCache: Product not found for cache deletion', ['product_id' => $productId]);
+
                 return;
             }
 
@@ -90,7 +91,7 @@ class Product
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache before product deletion', [
                 'product_id' => $productId,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
         }
     }
@@ -108,10 +109,12 @@ class Product
         $products = $this->getAllRelatedProducts($product);
 
         foreach ($products as $product) {
-            $urls[] = 'product_'.$product->url_key;
-        }
+            if (! $product?->id) {
+                continue;
+            }
 
-        $this->deletePrivCache();
+            $urls[] = 'product_'.$product->id;
+        }
 
         return $urls;
     }

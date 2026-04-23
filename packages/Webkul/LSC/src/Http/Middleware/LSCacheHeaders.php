@@ -3,10 +3,12 @@
 namespace Webkul\LSC\Http\Middleware;
 
 use Closure;
-use Illuminate\Support\Facades\Log;
-use Litespeed\LSCache\LSCache;
 use Litespeed\LSCache\LSCacheMiddleware as BaseLSCacheMiddleware;
 use Webkul\Category\Repositories\CategoryRepository;
+use Webkul\CMS\Repositories\PageRepository;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
+use Webkul\LSC\Support\LiteSpeedDebug;
+use Webkul\Marketing\Repositories\URLRewriteRepository;
 use Webkul\Product\Repositories\ProductRepository;
 
 class LSCacheHeaders extends BaseLSCacheMiddleware
@@ -36,18 +38,18 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $routeName = $request->route()?->getName();
 
         $response = $next($request);
-        
+
         if (
             (bool) config('responsecache.enabled')
             || ! (bool) core()->getConfigData('lsc.configuration.cache_application.active')
         ) {
-            return $response;
+            return $this->setNoCacheHeaders($response);
         }
 
         $dynamicCacheResponse = $this->handleDynamicCache($request, $response);
 
         if ($dynamicCacheResponse !== null) {
-            return $dynamicCacheResponse;
+            return LiteSpeedDebug::attachToResponse($dynamicCacheResponse);
         }
 
         if ($this->isShopStateRoute($request, $routeName)) {
@@ -96,7 +98,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
         $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
 
-        return $response;
+        return LiteSpeedDebug::attachToResponse($response, $tags, $lscacheControl);
     }
 
     /**
@@ -147,7 +149,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
 
         return match ($routeName) {
             'shop.home.index'                => ['home'],
-            'shop.cms.page'                  => ["page_$lastSegment"],
+            'shop.cms.page'                  => $this->getPageTags($lastSegment),
             'shop.product_or_category.index' => $this->getProductOrCategoryTags($slug),
             'shop.home.contact_us'           => ['contact'],
             'shop.search.index'              => ['search'],
@@ -221,7 +223,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     private function getProductOrCategoryTags(string $slug): array
     {
         if ($category = app(CategoryRepository::class)->findBySlug($slug)) {
-            return ['category_'.$slug];
+            return ['category_'.$category->id];
         }
 
         if (core()->getConfigData('catalog.products.search.engine') == 'elastic') {
@@ -241,10 +243,66 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
                 abort(404);
             }
 
-            return ['product_'.$slug];
+            return ['product_'.$product->id];
         }
 
-        return ['slug_'.$slug]; // fallback
+        $segments = array_values(array_filter(explode('/', $slug)));
+        $lastSegment = end($segments) ?: $slug;
+
+        if ($lastSegment && $category = app(CategoryRepository::class)->findBySlug($lastSegment)) {
+            return ['category_'.$category->id];
+        }
+
+        $urlRewriteRepository = app(URLRewriteRepository::class);
+
+        $categoryURLRewrite = $urlRewriteRepository->findOneWhere([
+            'entity_type'  => 'category',
+            'request_path' => $slug,
+            'locale'       => app()->getLocale(),
+        ]);
+
+        if (
+            $categoryURLRewrite
+            && $category = app(CategoryRepository::class)->find($categoryURLRewrite->entity_id)
+        ) {
+            return ['category_'.$category->id];
+        }
+
+        $productURLRewrite = $urlRewriteRepository->findOneWhere([
+            'entity_type'  => 'product',
+            'request_path' => $slug,
+        ]);
+
+        if (
+            $productURLRewrite
+            && $product = app(ProductRepository::class)
+                ->setSearchEngine($searchEngine ?? 'database')
+                ->find($productURLRewrite->entity_id)
+        ) {
+            if (
+                ! $product->url_key
+                || ! $product->visible_individually
+                || ! $product->status
+            ) {
+                abort(404);
+            }
+
+            return ['product_'.$product->id];
+        }
+
+        return []; // fallback
+    }
+
+    /**
+     * Get tags for CMS page routes.
+     */
+    private function getPageTags(string $slug): array
+    {
+        if ($page = app(PageRepository::class)->findOneWhere(['url_key' => $slug])) {
+            return ['page_'.$page->id];
+        }
+
+        return [];
     }
 
     /**
@@ -256,6 +314,6 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
 
         $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
 
-        return $response;
+        return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
     }
 }

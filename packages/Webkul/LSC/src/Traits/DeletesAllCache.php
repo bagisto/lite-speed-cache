@@ -19,7 +19,7 @@ trait DeletesAllCache
          * Use provided path, or fallback to config, or use default
          */
         if ($privPath === null) {
-            $privPath = core()->getConfigData('lsc.configuration.cache_application.cache_path') 
+            $privPath = core()->getConfigData('lsc.configuration.cache_application.cache_path')
                      ?? '/usr/local/lsws/cachedata/priv';
         }
 
@@ -30,19 +30,19 @@ trait DeletesAllCache
         }
 
         try {
-            if (!File::exists($privPath)) {
+            if (! File::exists($privPath)) {
                 Log::warning('LSCache: Priv cache path does not exist', ['path' => $privPath]);
 
                 return false;
             }
 
-            if (!File::isDirectory($privPath)) {
+            if (! File::isDirectory($privPath)) {
                 Log::error('LSCache: Path is not a directory', ['path' => $privPath]);
 
                 return false;
             }
 
-            if (!File::isWritable($privPath)) {
+            if (! File::isWritable($privPath)) {
                 Log::error('LSCache: Path is not writable', ['path' => $privPath]);
 
                 return false;
@@ -68,27 +68,27 @@ trait DeletesAllCache
                     $failedCount++;
 
                     Log::warning('LSCache: Failed to delete item', [
-                        'path' => $path,
+                        'path'  => $path,
                         'error' => $itemException->getMessage(),
                     ]);
                 }
             }
 
             Log::info('LSCache: Priv cache deletion completed', [
-                'path' => $privPath,
+                'path'    => $privPath,
                 'deleted' => $deletedCount,
-                'failed' => $failedCount,
+                'failed'  => $failedCount,
             ]);
 
             return $failedCount === 0;
 
         } catch (\Throwable $e) {
             Log::error('LSCache: Critical error during cache deletion', [
-                'path' => $privPath,
+                'path'  => $privPath,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return false;
         }
     }

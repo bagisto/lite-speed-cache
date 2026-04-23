@@ -121,6 +121,10 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\URLRewrite@afterUpdate',
         ],
 
+        'marketing.search_seo.url_rewrites.update.before' => [
+            'Webkul\LSC\Listeners\URLRewrite@beforeUpdate',
+        ],
+
         'marketing.search_seo.url_rewrites.delete.before' => [
             'Webkul\LSC\Listeners\URLRewrite@beforeDelete',
         ],

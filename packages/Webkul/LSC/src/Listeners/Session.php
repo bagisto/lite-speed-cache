@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use Litespeed\LSCache\LSCache;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 
 class Session
 {

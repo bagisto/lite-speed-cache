@@ -3,8 +3,8 @@
 namespace Webkul\LSC\Listeners;
 
 use Illuminate\Support\Facades\Log;
-use Litespeed\LSCache\LSCache;
 use Webkul\Category\Repositories\CategoryRepository;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 
 class Category
 {
@@ -56,7 +56,7 @@ class Category
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache after category update', [
                 'category_id' => $category->id ?? null,
-                'error' => $e->getMessage(),
+                'error'       => $e->getMessage(),
             ]);
         }
     }
@@ -74,7 +74,7 @@ class Category
 
             if (! $category) {
                 Log::warning('LSCache: Category not found for cache deletion', ['category_id' => $categoryId]);
-                
+
                 return;
             }
 
@@ -86,7 +86,7 @@ class Category
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache before category deletion', [
                 'category_id' => $categoryId,
-                'error' => $e->getMessage(),
+                'error'       => $e->getMessage(),
             ]);
         }
     }
@@ -96,12 +96,11 @@ class Category
      */
     private function getCategoryTags($category, array $extraSlugs = []): array
     {
-        $tags = ['category_id_'.$category->id, 'category-products_'.$category->id];
+        $tags = ['category_'.$category->id];
 
         foreach (array_unique(array_merge($this->getCategorySlugs($category), $extraSlugs)) as $slug) {
             if (! empty($slug)) {
-                $tags[] = 'category_'.$slug;
-                $tags[] = 'slug_'.$slug;
+                $tags[] = 'category_'.$category->id;
             }
         }
 

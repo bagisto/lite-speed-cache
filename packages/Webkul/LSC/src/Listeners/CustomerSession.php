@@ -2,8 +2,8 @@
 
 namespace Webkul\LSC\Listeners;
 
-use Litespeed\LSCache\LSCache;
 use Spatie\ResponseCache\Facades\ResponseCache;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 use Webkul\LSC\Traits\DeletesAllCache;
 
 class CustomerSession
