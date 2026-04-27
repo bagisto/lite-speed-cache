@@ -12,6 +12,7 @@ use Webkul\LSC\Http\Controllers\Admin\Catalog\CategoryController;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
+use Webkul\LSC\Http\Middleware\PreventSensitiveRouteCaching;
 
 class LSCServiceProvider extends ServiceProvider
 {
@@ -37,6 +38,10 @@ class LSCServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'lsc');
 
         $this->app->register(EventServiceProvider::class);
+
+        $router->pushMiddlewareToGroup('web', PreventSensitiveRouteCaching::class);
+
+        Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-auth-routes.php');
 
         Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-routes.php');
 
@@ -117,6 +122,8 @@ class LSCServiceProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__.'/../Routes/admin/web.php' => __DIR__.'/../../../Admin/src/Routes/web.php',
+
+            __DIR__.'/../Routes/admin/lsc-auth-routes.php' => __DIR__.'/../../../Admin/src/Routes/lsc-auth-routes.php',
 
             __DIR__.'/../Routes/shop/api.php' => __DIR__.'/../../../Shop/src/Routes/api.php',
 

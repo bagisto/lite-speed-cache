@@ -29,18 +29,14 @@ class NoLiteSpeedCache
         $routeName = $request->route()?->getName();
 
         if ($this->isShopStateRoute($request, $routeName)) {
-            $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
-
-            return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
+            return $this->setNoCacheHeaders($response);
         }
 
         if ($routeName && in_array($routeName, $this->cacheRoutes, true)) {
             return LiteSpeedDebug::attachToResponse($response);
         }
 
-        $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
-
-        return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
+        return $this->setNoCacheHeaders($response);
     }
 
     /**
@@ -64,5 +60,18 @@ class NoLiteSpeedCache
             || $request->is('checkout/cart/*')
             || $request->is('compare')
             || $request->is('customer/account/wishlist');
+    }
+
+    /**
+     * Apply browser-safe and LiteSpeed-safe no-cache headers.
+     */
+    private function setNoCacheHeaders($response)
+    {
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
+
+        return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
     }
 }
