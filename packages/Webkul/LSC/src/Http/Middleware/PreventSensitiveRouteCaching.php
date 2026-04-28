@@ -28,7 +28,8 @@ class PreventSensitiveRouteCaching
     }
 
     /**
-     * Sensitive routes and authenticated sessions must never be cached.
+     * Sensitive routes must never be cached, but public storefront pages may still be cached
+     * for logged-in customers when they do not expose customer-specific state directly.
      */
     private function shouldBypassCache(Request $request): bool
     {
@@ -45,10 +46,6 @@ class PreventSensitiveRouteCaching
             return true;
         }
 
-        if (auth()->guard('customer')->check()) {
-            return true;
-        }
-
         return $isAdminRoute
             || $request->is('login')
             || $request->is('logout')
@@ -57,6 +54,13 @@ class PreventSensitiveRouteCaching
             || $request->is('cart')
             || $request->is('cart/*')
             || $request->is('customer')
-            || $request->is('customer/*');
+            || $request->is('customer/*')
+            || $request->is('compare')
+            || $request->is('api/checkout/cart')
+            || $request->is('api/checkout/cart/*')
+            || $request->is('api/compare-items')
+            || $request->is('api/compare-items/*')
+            || $request->is('api/customer/wishlist')
+            || $request->is('api/customer/wishlist/*');
     }
 }
