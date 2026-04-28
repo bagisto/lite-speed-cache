@@ -25,6 +25,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         'shop.home.contact_us',
         'shop.search.index',
         'shop.api.categories.tree',
+        'shop.api.products.index',
     ];
 
     /**
@@ -65,7 +66,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return $this->setNoCacheHeaders($response);
         }
 
-        $tags = $this->getRouteTags($routeName, $request->getPathInfo());
+        $tags = $this->getRouteTags($routeName, $request);
 
         // Invalidate home cache for certain actions.
         if ($this->shouldInvalidateHomeCache($routeName)) {
@@ -143,8 +144,9 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     /**
      * Get tags for the current route.
      */
-    private function getRouteTags($routeName, $routePathInfo): array
+    private function getRouteTags($routeName, $request): array
     {
+        $routePathInfo = $request->getPathInfo();
         $slug = urldecode(trim($routePathInfo, '/'));
         $lastSegment = last(explode('/', $routePathInfo));
 
@@ -156,6 +158,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             'shop.search.index'              => ['search'],
             'shop.compare.index'             => ['compare'],
             'shop.api.categories.tree'       => ['home-header'],
+            'shop.api.products.index'        => $this->getProductListingTags($request),
             default                          => [],
         };
     }
@@ -302,6 +305,20 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     {
         if ($page = app(PageRepository::class)->findOneWhere(['url_key' => $slug])) {
             return ['page_'.$page->id];
+        }
+
+        return [];
+    }
+
+    /**
+     * Get tags for product listing API routes.
+     */
+    private function getProductListingTags($request): array
+    {
+        $categoryId = (int) $request->query('category_id');
+
+        if ($categoryId > 0) {
+            return ['category-products_'.$categoryId];
         }
 
         return [];

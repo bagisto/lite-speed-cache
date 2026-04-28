@@ -35,7 +35,9 @@ Route::group(['prefix' => 'api'], function () {
     });
 
     Route::controller(ProductController::class)->prefix('products')->group(function () {
-        Route::get('', 'index')->name('shop.api.products.index');
+        Route::get('', 'index')
+            ->name('shop.api.products.index')
+            ->middleware(['lscache.response']);
 
         Route::get('{id}/related', 'relatedProducts')->name('shop.api.products.related.index');
 

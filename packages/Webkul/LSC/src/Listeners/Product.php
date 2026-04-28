@@ -14,6 +14,13 @@ class Product
     use DeletesAllCache;
 
     /**
+     * Track product category assignments before update so old category listing caches can be purged too.
+     *
+     * @var array<int, array<int, int>>
+     */
+    private static array $oldCategoryIdsByProductId = [];
+
+    /**
      * Create a new listener instance.
      *
      * @return void
@@ -25,6 +32,20 @@ class Product
     ) {}
 
     /**
+     * Capture category assignments before update so removed category listing caches can be purged too.
+     */
+    public function beforeUpdate($productId): void
+    {
+        $product = $this->productRepository->find($productId);
+
+        if (! $product) {
+            return;
+        }
+
+        self::$oldCategoryIdsByProductId[$productId] = $this->getCategoryIds($product);
+    }
+
+    /**
      * After product create - purge home cache for new products
      *
      * @param  \Webkul\Product\Contracts\Product  $product
@@ -33,7 +54,7 @@ class Product
     public function afterCreate($product)
     {
         try {
-            LSCache::purgeTags(['home']);
+            LSCache::purgeTags(array_merge(['home'], $this->getCategoryTags($product)));
 
             $this->deletePrivCache();
         } catch (\Throwable $e) {
@@ -53,11 +74,14 @@ class Product
     public function afterUpdate($product)
     {
         try {
-            $urls = $this->getForgettableUrls($product);
+            $oldCategoryIds = self::$oldCategoryIdsByProductId[$product->id] ?? [];
+            $urls = $this->getForgettableUrls($product, $oldCategoryIds);
 
             if (! empty($urls)) {
                 LSCache::purgeTags($urls);
             }
+
+            unset(self::$oldCategoryIdsByProductId[$product->id]);
         } catch (\Throwable $e) {
             Log::error('LSCache: Failed to purge cache after product update', [
                 'product_id' => $product->id ?? null,
@@ -83,7 +107,7 @@ class Product
                 return;
             }
 
-            $urls = $this->getForgettableUrls($product);
+            $urls = $this->getForgettableUrls($product, $this->getCategoryIds($product));
 
             if (! empty($urls)) {
                 LSCache::purgeTags($urls);
@@ -102,7 +126,7 @@ class Product
      * @param  \Webkul\Product\Contracts\Product  $product
      * @return array
      */
-    public function getForgettableUrls($product)
+    public function getForgettableUrls($product, array $extraCategoryIds = [])
     {
         $urls = [];
 
@@ -114,9 +138,35 @@ class Product
             }
 
             $urls[] = 'product_'.$product->id;
+
+            $urls = array_merge($urls, $this->getCategoryTags($product, $extraCategoryIds));
         }
 
         return $urls;
+    }
+
+    /**
+     * Resolve the category listing tags that can contain this product.
+     */
+    private function getCategoryTags($product, array $extraCategoryIds = []): array
+    {
+        $categoryIds = array_unique(array_merge($this->getCategoryIds($product), $extraCategoryIds));
+
+        return array_map(
+            fn (int $categoryId) => 'category-products_'.$categoryId,
+            array_values(array_filter($categoryIds))
+        );
+    }
+
+    /**
+     * Resolve current category IDs for the product.
+     */
+    private function getCategoryIds($product): array
+    {
+        return $product->categories()
+            ->pluck('categories.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
