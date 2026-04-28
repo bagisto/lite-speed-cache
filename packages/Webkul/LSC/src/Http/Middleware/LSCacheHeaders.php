@@ -24,6 +24,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         'shop.product_or_category.index',
         'shop.home.contact_us',
         'shop.search.index',
+        'shop.api.categories.index',
         'shop.api.categories.tree',
         'shop.api.products.index',
     ];
@@ -157,6 +158,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             'shop.home.contact_us'           => ['contact'],
             'shop.search.index'              => ['search'],
             'shop.compare.index'             => ['compare'],
+            'shop.api.categories.index'      => ['home-categories'],
             'shop.api.categories.tree'       => ['home-header'],
             'shop.api.products.index'        => $this->getProductListingTags($request),
             default                          => [],

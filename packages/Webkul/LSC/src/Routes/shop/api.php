@@ -21,7 +21,9 @@ Route::group(['prefix' => 'api'], function () {
     });
 
     Route::controller(CategoryController::class)->prefix('categories')->group(function () {
-        Route::get('', 'index')->name('shop.api.categories.index');
+        Route::get('', 'index')
+            ->name('shop.api.categories.index')
+            ->middleware(['lscache.response']);
 
         Route::get('tree', 'tree')
             ->name('shop.api.categories.tree')

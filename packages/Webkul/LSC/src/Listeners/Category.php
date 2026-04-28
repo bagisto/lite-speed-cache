@@ -99,6 +99,7 @@ class Category
     {
         $tags = [
             'category_'.$category->id,
+            'home-categories',
             'home-header',
         ];
 
