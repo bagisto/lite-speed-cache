@@ -46,6 +46,7 @@ class Category
     {
         try {
             $oldSlugs = self::$oldSlugsByCategoryId[$category->id] ?? [];
+
             $tags = $this->getCategoryTags($category, $oldSlugs);
 
             if (! empty($tags)) {
@@ -96,7 +97,10 @@ class Category
      */
     private function getCategoryTags($category, array $extraSlugs = []): array
     {
-        $tags = ['category_'.$category->id];
+        $tags = [
+            'category_'.$category->id,
+            'home-header',
+        ];
 
         foreach (array_unique(array_merge($this->getCategorySlugs($category), $extraSlugs)) as $slug) {
             if (! empty($slug)) {
