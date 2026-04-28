@@ -29,7 +29,9 @@ Route::group(['prefix' => 'api'], function () {
             ->name('shop.api.categories.tree')
             ->middleware(['lscache.response']);
 
-        Route::get('attributes', 'getAttributes')->name('shop.api.categories.attributes');
+        Route::get('attributes', 'getAttributes')
+            ->name('shop.api.categories.attributes')
+            ->middleware(['lscache.response']);
 
         Route::get('attributes/{attribute_id}/options', 'getAttributeOptions')->name('shop.api.categories.attribute_options');
 
