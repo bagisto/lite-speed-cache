@@ -127,6 +127,8 @@ class LSCServiceProvider extends ServiceProvider
 
             __DIR__.'/../Routes/shop/api.php' => __DIR__.'/../../../Shop/src/Routes/api.php',
 
+            __DIR__.'/../Routes/shop/customer-routes.php' => __DIR__.'/../../../Shop/src/Routes/customer-routes.php',
+
             __DIR__.'/../Routes/shop/store-front-routes.php' => __DIR__.'/../../../Shop/src/Routes/store-front-routes.php',
 
             __DIR__.'/../Resources/views/shop/components/layouts/header' => resource_path('themes/default/views/components/layouts/header'),

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Spatie\ResponseCache\Middlewares\DoNotCacheResponse;
+use Webkul\LSC\Http\Middleware\AdaptiveCompareCache;
 use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\BookingProductController;
 use Webkul\Shop\Http\Controllers\CompareController;
@@ -55,12 +56,14 @@ Route::middleware(['lscache.response'])->group(function () {
     Route::get('search', [SearchController::class, 'index'])
         ->name('shop.search.index');
 
-    /**
-     * Compare products
-     */
-    Route::get('compare', [CompareController::class, 'index'])
-        ->name('shop.compare.index');
 });
+
+/**
+ * Compare products
+ */
+Route::get('compare', [CompareController::class, 'index'])
+    ->name('shop.compare.index')
+    ->middleware([AdaptiveCompareCache::class]);
 
 /**
  * Contact us form submit route.

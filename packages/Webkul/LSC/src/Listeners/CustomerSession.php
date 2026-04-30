@@ -15,7 +15,7 @@ class CustomerSession
      *
      * @return void
      */
-    public function afterCreate()
+    public function afterCreate($customer = null)
     {
         $this->deletePrivCache();
 

@@ -1,7 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Webkul\LSC\Http\Middleware\AdaptiveCompareCache;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
+use Webkul\LSC\Http\Middleware\PrivateCartCache;
+use Webkul\LSC\Http\Middleware\PurgeComparePrivateCache;
+use Webkul\LSC\Http\Middleware\PurgeCartPrivateCache;
 use Webkul\Shop\Http\Controllers\API\AddressController;
 use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\API\CategoryController;
@@ -57,38 +61,45 @@ Route::group(['prefix' => 'api'], function () {
     });
 
     Route::controller(CompareController::class)->prefix('compare-items')->group(function () {
-        Route::get('', 'index')->name('shop.api.compare.index');
+        Route::get('', 'index')
+            ->name('shop.api.compare.index')
+            ->middleware([AdaptiveCompareCache::class]);
 
-        Route::post('', 'store')->name('shop.api.compare.store');
+        Route::middleware([NoLiteSpeedCache::class, PurgeComparePrivateCache::class])->group(function () {
+            Route::post('', 'store')->name('shop.api.compare.store');
 
-        Route::delete('', 'destroy')->name('shop.api.compare.destroy');
+            Route::delete('', 'destroy')->name('shop.api.compare.destroy');
 
-        Route::delete('all', 'destroyAll')->name('shop.api.compare.destroy_all');
+            Route::delete('all', 'destroyAll')->name('shop.api.compare.destroy_all');
+        });
     });
 
     Route::controller(CartController::class)
         ->prefix('checkout/cart')
-        ->middleware([NoLiteSpeedCache::class])
         ->group(function () {
-            Route::get('', 'index')->name('shop.api.checkout.cart.index');
-
-            Route::post('', 'store')->name('shop.api.checkout.cart.store');
-
-            Route::put('', 'update')->name('shop.api.checkout.cart.update');
-
-            Route::delete('', 'destroy')->name('shop.api.checkout.cart.destroy');
-
-            Route::delete('selected', 'destroySelected')->name('shop.api.checkout.cart.destroy_selected');
-
-            Route::post('move-to-wishlist', 'moveToWishlist')->name('shop.api.checkout.cart.move_to_wishlist');
-
-            Route::post('coupon', 'storeCoupon')->name('shop.api.checkout.cart.coupon.apply');
-
-            Route::post('estimate-shipping-methods', 'estimateShippingMethods')->name('shop.api.checkout.cart.estimate_shipping');
-
-            Route::delete('coupon', 'destroyCoupon')->name('shop.api.checkout.cart.coupon.remove');
+            Route::get('', 'index')
+                ->name('shop.api.checkout.cart.index')
+                ->middleware([PrivateCartCache::class]);
 
             Route::get('cross-sell', 'crossSellProducts')->name('shop.api.checkout.cart.cross-sell.index');
+
+            Route::middleware([NoLiteSpeedCache::class, PurgeCartPrivateCache::class])->group(function () {
+                Route::post('', 'store')->name('shop.api.checkout.cart.store');
+
+                Route::put('', 'update')->name('shop.api.checkout.cart.update');
+
+                Route::delete('', 'destroy')->name('shop.api.checkout.cart.destroy');
+
+                Route::delete('selected', 'destroySelected')->name('shop.api.checkout.cart.destroy_selected');
+
+                Route::post('move-to-wishlist', 'moveToWishlist')->name('shop.api.checkout.cart.move_to_wishlist');
+
+                Route::post('coupon', 'storeCoupon')->name('shop.api.checkout.cart.coupon.apply');
+
+                Route::post('estimate-shipping-methods', 'estimateShippingMethods')->name('shop.api.checkout.cart.estimate_shipping');
+
+                Route::delete('coupon', 'destroyCoupon')->name('shop.api.checkout.cart.coupon.remove');
+            });
         });
 
     Route::controller(OnepageController::class)->prefix('checkout/onepage')->group(function () {
@@ -117,15 +128,21 @@ Route::group(['prefix' => 'api'], function () {
         });
 
         Route::controller(WishlistController::class)->prefix('wishlist')->group(function () {
-            Route::get('', 'index')->name('shop.api.customers.account.wishlist.index');
+            Route::get('', 'index')
+                ->name('shop.api.customers.account.wishlist.index')
+                ->middleware([NoLiteSpeedCache::class]);
 
-            Route::post('', 'store')->name('shop.api.customers.account.wishlist.store');
+            Route::middleware([NoLiteSpeedCache::class])->group(function () {
+                Route::post('', 'store')->name('shop.api.customers.account.wishlist.store');
 
-            Route::post('{id}/move-to-cart', 'moveToCart')->name('shop.api.customers.account.wishlist.move_to_cart');
+                Route::delete('all', 'destroyAll')->name('shop.api.customers.account.wishlist.destroy_all');
 
-            Route::delete('all', 'destroyAll')->name('shop.api.customers.account.wishlist.destroy_all');
+                Route::delete('{id}', 'destroy')->name('shop.api.customers.account.wishlist.destroy');
+            });
 
-            Route::delete('{id}', 'destroy')->name('shop.api.customers.account.wishlist.destroy');
+            Route::post('{id}/move-to-cart', 'moveToCart')
+                ->name('shop.api.customers.account.wishlist.move_to_cart')
+                ->middleware([NoLiteSpeedCache::class, PurgeCartPrivateCache::class]);
         });
     });
 });

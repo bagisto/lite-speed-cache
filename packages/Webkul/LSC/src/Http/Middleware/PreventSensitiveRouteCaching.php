@@ -55,11 +55,6 @@ class PreventSensitiveRouteCaching
             || $request->is('cart/*')
             || $request->is('customer')
             || $request->is('customer/*')
-            || $request->is('compare')
-            || $request->is('api/checkout/cart')
-            || $request->is('api/checkout/cart/*')
-            || $request->is('api/compare-items')
-            || $request->is('api/compare-items/*')
             || $request->is('api/customer/wishlist')
             || $request->is('api/customer/wishlist/*');
     }
