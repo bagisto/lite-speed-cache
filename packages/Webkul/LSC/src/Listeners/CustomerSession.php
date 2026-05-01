@@ -3,24 +3,22 @@
 namespace Webkul\LSC\Listeners;
 
 use Spatie\ResponseCache\Facades\ResponseCache;
+use Webkul\LSC\Support\CartCacheContext;
 use Webkul\LSC\Support\DebuggableLSCache as LSCache;
-use Webkul\LSC\Traits\DeletesAllCache;
 
 class CustomerSession
 {
-    use DeletesAllCache;
-
     /**
      * After customer session create (login).
      *
      * @return void
      */
-    public function afterCreate($customer = null)
+    public function afterCreate($customer)
     {
-        $this->deletePrivCache();
-
-        LSCache::purgeTags(['home', 'home-header']);
-        LSCache::purgeItems(['/api/checkout/cart']);
+        LSCache::purgePrivateTags(array_merge(
+            CartCacheContext::guestPrivateTags(request()),
+            CartCacheContext::customerPrivateTags((int) $customer->id)
+        ));
 
         ResponseCache::forget('/api/checkout/cart');
     }
@@ -30,12 +28,12 @@ class CustomerSession
      *
      * @return void
      */
-    public function afterDestroy()
+    public function afterDestroy($customerId)
     {
-        $this->deletePrivCache();
-
-        LSCache::purgeTags(['home', 'home-header']);
-        LSCache::purgeItems(['/api/checkout/cart']);
+        LSCache::purgePrivateTags(array_merge(
+            CartCacheContext::guestPrivateTags(request()),
+            $customerId ? CartCacheContext::customerPrivateTags((int) $customerId) : []
+        ));
 
         ResponseCache::forget('/api/checkout/cart');
     }

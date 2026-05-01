@@ -2,13 +2,11 @@
 
 namespace Webkul\LSC\Listeners;
 
+use Webkul\LSC\Support\CartCacheContext;
 use Webkul\LSC\Support\DebuggableLSCache as LSCache;
-use Webkul\LSC\Traits\DeletesAllCache;
 
 class ThemeCustomization
 {
-    use DeletesAllCache;
-
     /**
      * After theme customization create
      *
@@ -54,8 +52,6 @@ class ThemeCustomization
      */
     public function afterChange()
     {
-        $this->deletePrivCache();
-
-        LSCache::purgeTags(['home', 'home-header']);
+        LSCache::purgePrivateTags(CartCacheContext::currentPrivateTags(request()));
     }
 }

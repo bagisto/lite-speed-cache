@@ -467,4 +467,6 @@
             },
         });
     </script>
+
+    @include('lsc::shop.components.layouts.header.wishlist-private-cache-patch')
 @endPushOnce

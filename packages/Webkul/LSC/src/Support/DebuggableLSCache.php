@@ -35,4 +35,19 @@ class DebuggableLSCache
 
         return BaseLSCache::purgeItems((array) $items, ...$arguments);
     }
+
+    /**
+     * Purge one or more private tags.
+     */
+    public static function purgePrivateTags(array|string $tags, bool $stale = true)
+    {
+        LiteSpeedDebug::recordPurgePrivateTags((array) $tags);
+
+        $privateTagString = implode(',', array_map(
+            static fn (string $tag): string => 'tag='.$tag,
+            array_values(array_filter((array) $tags))
+        ));
+
+        return BaseLSCache::purge('private, '.$privateTagString, $stale);
+    }
 }

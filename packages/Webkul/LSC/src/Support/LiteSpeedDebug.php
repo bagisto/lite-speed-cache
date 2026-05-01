@@ -68,6 +68,24 @@ class LiteSpeedDebug
     }
 
     /**
+     * Track a private tag-based purge.
+     */
+    public static function recordPurgePrivateTags(array|string $tags): void
+    {
+        if (! self::enabled()) {
+            return;
+        }
+
+        foreach ((array) $tags as $tag) {
+            if (! empty($tag)) {
+                self::$purges[] = 'private-tag='.$tag;
+            }
+        }
+
+        self::$purges = array_values(array_unique(self::$purges));
+    }
+
+    /**
      * Track exact URL purges when the response sends them explicitly.
      */
     public static function recordPurgeUrls(array|string $urls): void

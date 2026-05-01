@@ -46,13 +46,20 @@ class NoLiteSpeedCache
     {
         return str_starts_with((string) $routeName, 'shop.api.checkout.cart.')
             || str_starts_with((string) $routeName, 'shop.api.compare.')
+            || str_starts_with((string) $routeName, 'shop.api.customers.account.wishlist.')
             || $routeName === 'shop.checkout.cart.index'
+            || $routeName === 'shop.compare.index'
+            || $routeName === 'shop.customers.account.wishlist.index'
             || $request->is('api/checkout/cart')
             || $request->is('api/checkout/cart/*')
             || $request->is('api/compare-items')
             || $request->is('api/compare-items/*')
+            || $request->is('api/customer/wishlist')
+            || $request->is('api/customer/wishlist/*')
             || $request->is('checkout/cart')
-            || $request->is('checkout/cart/*');
+            || $request->is('checkout/cart/*')
+            || $request->is('compare')
+            || $request->is('customer/account/wishlist');
     }
 
     /**

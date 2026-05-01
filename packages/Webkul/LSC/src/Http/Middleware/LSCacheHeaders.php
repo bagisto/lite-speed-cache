@@ -299,7 +299,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return ['product_'.$product->id];
         }
 
-        return [];
+        return []; // fallback
     }
 
     /**

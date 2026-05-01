@@ -23,10 +23,6 @@ class EventServiceProvider extends ServiceProvider
         'catalog.product.update.after'  => [
             'Webkul\LSC\Listeners\Product@afterUpdate',
         ],
-        'customer.wishlist.create.after' => [
-            'Webkul\LSC\Listeners\Product@afterCreate',
-        ],
-
         'catalog.product.delete.before' => [
             'Webkul\LSC\Listeners\Product@beforeDelete',
         ],
@@ -89,6 +85,23 @@ class EventServiceProvider extends ServiceProvider
 
         'customer.compare.delete-all.before' => [
             'Webkul\LSC\Listeners\Compare@beforeDelete',
+        ],
+
+        'customer.wishlist.create.after' => [
+            'Webkul\LSC\Listeners\Product@afterCreate',
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.wishlist.delete.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.wishlist.delete-all.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.wishlist.move-to-cart.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
         ],
 
         'customer.after.login' => [

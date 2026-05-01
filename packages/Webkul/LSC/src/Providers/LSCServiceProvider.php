@@ -3,6 +3,7 @@
 namespace Webkul\LSC\Providers;
 
 use Illuminate\Routing\Router;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Webkul\Admin\Http\Controllers\Catalog\CategoryController as BaseCategoryController;
@@ -12,6 +13,9 @@ use Webkul\LSC\Http\Controllers\Admin\Catalog\CategoryController;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
+use Webkul\LSC\Http\Middleware\PrivateCartCache;
+use Webkul\LSC\Http\Middleware\PrivateCompareCache;
+use Webkul\LSC\Http\Middleware\PrivateWishlistCache;
 use Webkul\LSC\Http\Middleware\PreventSensitiveRouteCaching;
 
 class LSCServiceProvider extends ServiceProvider
@@ -21,6 +25,8 @@ class LSCServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        EncryptCookies::except('lsc_private');
+
         $this->registerConfig();
 
         $this->registerCommands();
@@ -48,8 +54,14 @@ class LSCServiceProvider extends ServiceProvider
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
 
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
+        $router->aliasMiddleware('lscache.cart.private', PrivateCartCache::class);
+        $router->aliasMiddleware('lscache.compare.private', PrivateCompareCache::class);
+        $router->aliasMiddleware('lscache.wishlist.private', PrivateWishlistCache::class);
 
         Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/api.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/private-cart-routes.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/private-compare-routes.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/private-wishlist-routes.php');
 
         $this->app['view']->prependNamespace('shop', __DIR__.'/../Resources/views/shop');
 
@@ -126,8 +138,6 @@ class LSCServiceProvider extends ServiceProvider
             __DIR__.'/../Routes/admin/lsc-auth-routes.php' => __DIR__.'/../../../Admin/src/Routes/lsc-auth-routes.php',
 
             __DIR__.'/../Routes/shop/api.php' => __DIR__.'/../../../Shop/src/Routes/api.php',
-
-            __DIR__.'/../Routes/shop/customer-routes.php' => __DIR__.'/../../../Shop/src/Routes/customer-routes.php',
 
             __DIR__.'/../Routes/shop/store-front-routes.php' => __DIR__.'/../../../Shop/src/Routes/store-front-routes.php',
 

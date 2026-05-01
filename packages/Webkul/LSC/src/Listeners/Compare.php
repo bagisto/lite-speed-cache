@@ -2,6 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
+use Webkul\LSC\Support\CartCacheContext;
 use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 
 class Compare
@@ -13,7 +14,9 @@ class Compare
      */
     public function afterUpdate()
     {
-        LSCache::purgeTags(['compare']);
+        LSCache::purgePrivateTags(
+            CartCacheContext::currentPrivateTagsForFamily('compare-private', ['compare-api', 'compare-page'], request())
+        );
     }
 
     /**
@@ -23,6 +26,8 @@ class Compare
      */
     public function beforeDelete()
     {
-        LSCache::purgeTags(['compare']);
+        LSCache::purgePrivateTags(
+            CartCacheContext::currentPrivateTagsForFamily('compare-private', ['compare-api', 'compare-page'], request())
+        );
     }
 }
