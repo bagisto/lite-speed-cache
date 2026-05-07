@@ -307,7 +307,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
      */
     private function getPageTags(string $slug): array
     {
-        if ($page = app(PageRepository::class)->findOneWhere(['url_key' => $slug])) {
+        if ($page = app(PageRepository::class)->findByUrlKey($slug)) {
             return ['page_'.$page->id];
         }
 
