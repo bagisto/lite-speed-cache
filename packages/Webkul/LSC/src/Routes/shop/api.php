@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
+use Webkul\LSC\Http\Middleware\PurgeCartPrivateCache;
 use Webkul\Shop\Http\Controllers\API\AddressController;
 use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\API\CategoryController;
@@ -68,10 +69,8 @@ Route::group(['prefix' => 'api'], function () {
 
     Route::controller(CartController::class)
         ->prefix('checkout/cart')
-        ->middleware([NoLiteSpeedCache::class])
+        ->middleware([NoLiteSpeedCache::class, PurgeCartPrivateCache::class])
         ->group(function () {
-            Route::get('', 'index')->name('shop.api.checkout.cart.index');
-
             Route::post('', 'store')->name('shop.api.checkout.cart.store');
 
             Route::put('', 'update')->name('shop.api.checkout.cart.update');
@@ -87,8 +86,6 @@ Route::group(['prefix' => 'api'], function () {
             Route::post('estimate-shipping-methods', 'estimateShippingMethods')->name('shop.api.checkout.cart.estimate_shipping');
 
             Route::delete('coupon', 'destroyCoupon')->name('shop.api.checkout.cart.coupon.remove');
-
-            Route::get('cross-sell', 'crossSellProducts')->name('shop.api.checkout.cart.cross-sell.index');
         });
 
     Route::controller(OnepageController::class)->prefix('checkout/onepage')->group(function () {

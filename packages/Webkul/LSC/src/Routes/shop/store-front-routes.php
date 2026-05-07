@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Spatie\ResponseCache\Middlewares\DoNotCacheResponse;
-use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\BookingProductController;
 use Webkul\Shop\Http\Controllers\CompareController;
 use Webkul\Shop\Http\Controllers\HomeController;
@@ -11,21 +9,6 @@ use Webkul\Shop\Http\Controllers\ProductController;
 use Webkul\Shop\Http\Controllers\ProductsCategoriesProxyController;
 use Webkul\Shop\Http\Controllers\SearchController;
 use Webkul\Shop\Http\Controllers\SubscriptionController;
-
-/**
- * Store front cart.
- */
-Route::get('api/checkout/cart', [CartController::class, 'index'])
-    ->name('shop.api.checkout.cart.index')
-    ->middleware(['no.lscache', DoNotCacheResponse::class]);
-
-Route::post('api/checkout/cart', [CartController::class, 'store'])
-    ->name('shop.api.checkout.cart.store')
-    ->middleware(['no.lscache']);
-
-Route::delete('api/checkout/cart', [CartController::class, 'destroy'])
-    ->name('shop.api.checkout.cart.destroy')
-    ->middleware(['no.lscache']);
 
 /**
  * CMS pages.

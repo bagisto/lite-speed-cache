@@ -86,7 +86,7 @@ class CartCacheContext
      */
     public static function currentPrivateTags(?Request $request = null): array
     {
-        return self::privateTagsForContext(self::guestSessionContextKey($request), self::SCOPES);
+        return self::privateTagsForContext(self::currentContextKey($request), self::SCOPES);
     }
 
     /**
@@ -102,7 +102,7 @@ class CartCacheContext
      */
     public static function guestPrivateTags(?Request $request = null): array
     {
-        return self::privateTagsForContext(self::guestSessionContextKey($request), self::SCOPES);
+        return self::privateTagsForContext(self::guestContextKey($request), self::SCOPES);
     }
 
     /**
@@ -110,9 +110,7 @@ class CartCacheContext
      */
     public static function responseTags(string $scope, ?Request $request = null): array
     {
-        $contextKey = auth()->guard('customer')->id()
-            ? 'customer_'.auth()->guard('customer')->id()
-            : self::guestSessionContextKey($request);
+        $contextKey = self::responseContextKey($request);
 
         return self::privateTagsForContext($contextKey, ['cart-private', $scope]);
     }
@@ -122,9 +120,7 @@ class CartCacheContext
      */
     public static function responseTagsForFamily(string $family, string $scope, ?Request $request = null): array
     {
-        $contextKey = auth()->guard('customer')->id()
-            ? 'customer_'.auth()->guard('customer')->id()
-            : self::guestSessionContextKey($request);
+        $contextKey = self::responseContextKey($request);
 
         return self::privateTagsForContext($contextKey, [$family, $scope]);
     }
@@ -134,9 +130,7 @@ class CartCacheContext
      */
     public static function currentPrivateTagsForFamily(string $family, array $scopes, ?Request $request = null): array
     {
-        $contextKey = auth()->guard('customer')->id()
-            ? 'customer_'.auth()->guard('customer')->id()
-            : self::guestSessionContextKey($request);
+        $contextKey = self::currentContextKey($request);
 
         return self::privateTagsForContext($contextKey, array_merge([$family], $scopes));
     }
@@ -154,14 +148,46 @@ class CartCacheContext
      */
     public static function guestPrivateTagsForFamily(string $family, array $scopes, ?Request $request = null): array
     {
-        return self::privateTagsForContext(self::guestSessionContextKey($request), array_merge([$family], $scopes));
+        return self::privateTagsForContext(self::guestContextKey($request), array_merge([$family], $scopes));
     }
 
     /**
-     * Hash the guest session ID into a tag-safe identifier.
+     * Resolve the tag context used for fresh response writes.
      */
-    private static function guestSessionContextKey(?Request $request = null): string
+    private static function responseContextKey(?Request $request = null): string
     {
+        if ($customerId = auth()->guard('customer')->id()) {
+            return 'customer_'.$customerId;
+        }
+
+        return 'guest_'.self::privateCookieValue($request);
+    }
+
+    /**
+     * Resolve the tag context that should be purged for the current request.
+     */
+    private static function currentContextKey(?Request $request = null): string
+    {
+        if ($customerId = auth()->guard('customer')->id()) {
+            return 'customer_'.$customerId;
+        }
+
+        return self::guestContextKey($request);
+    }
+
+    /**
+     * Resolve the guest tag context from the active private cookie when possible.
+     */
+    private static function guestContextKey(?Request $request = null): string
+    {
+        $request ??= request();
+
+        $privateCookie = (string) $request->cookie(self::privateCookieName(), '');
+
+        if ($privateCookie !== '') {
+            return 'guest_'.$privateCookie;
+        }
+
         return 'guest_'.self::privateCookieValue($request);
     }
 
