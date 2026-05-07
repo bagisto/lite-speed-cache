@@ -518,7 +518,6 @@
         });
     </script>
 
-    @include('lsc::shop.components.layouts.header.wishlist-private-cache-patch')
 @endPushOnce
 
 {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.after') !!}
