@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
 use Webkul\LSC\Http\Middleware\PurgeCartPrivateCache;
+use Webkul\LSC\Http\Middleware\PurgeWishlistStateCache;
 use Webkul\Shop\Http\Controllers\API\AddressController;
 use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\API\CategoryController;
@@ -116,13 +117,21 @@ Route::group(['prefix' => 'api'], function () {
         Route::controller(WishlistController::class)->prefix('wishlist')->group(function () {
             Route::get('', 'index')->name('shop.api.customers.account.wishlist.index');
 
-            Route::post('', 'store')->name('shop.api.customers.account.wishlist.store');
+            Route::post('', 'store')
+                ->name('shop.api.customers.account.wishlist.store')
+                ->middleware([PurgeWishlistStateCache::class]);
 
-            Route::post('{id}/move-to-cart', 'moveToCart')->name('shop.api.customers.account.wishlist.move_to_cart');
+            Route::post('{id}/move-to-cart', 'moveToCart')
+                ->name('shop.api.customers.account.wishlist.move_to_cart')
+                ->middleware([PurgeWishlistStateCache::class]);
 
-            Route::delete('all', 'destroyAll')->name('shop.api.customers.account.wishlist.destroy_all');
+            Route::delete('all', 'destroyAll')
+                ->name('shop.api.customers.account.wishlist.destroy_all')
+                ->middleware([PurgeWishlistStateCache::class]);
 
-            Route::delete('{id}', 'destroy')->name('shop.api.customers.account.wishlist.destroy');
+            Route::delete('{id}', 'destroy')
+                ->name('shop.api.customers.account.wishlist.destroy')
+                ->middleware([PurgeWishlistStateCache::class]);
         });
     });
 });

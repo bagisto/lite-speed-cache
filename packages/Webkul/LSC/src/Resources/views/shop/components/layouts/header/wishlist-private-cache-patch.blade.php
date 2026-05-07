@@ -1,39 +1,106 @@
 <script type="module">
     (() => {
         const patchKey = '__lscWishlistComponentPatchInstalled';
-        const loginUrl = @json(route('shop.customer.session.index'));
-        const wishlistUrl = @json(route('shop.api.customers.account.wishlist.store'));
+        const wishlistIndexUrl = @json(route('shop.api.customers.account.wishlist.index'));
+        const isCustomerLoggedIn = @json(auth()->guard('customer')->check());
+        let wishlistIdsPromise = null;
 
         const resolveApp = () => window.app ?? (typeof app !== 'undefined' ? app : null);
+        const debug = (...args) => console.log('[LSC wishlist patch]', ...args);
 
-        const resolveMessage = payload => payload?.data?.message
-            ?? payload?.data?.data?.message
-            ?? payload?.response?.data?.message
-            ?? payload?.response?.data?.data?.message
-            ?? null;
+        const extractWishlistIds = payload => {
+            const items = payload?.data?.data ?? [];
 
-        const isLoginResponse = payload => {
-            const response = payload?.response ?? payload;
-            const status = response?.status ?? null;
-            const finalUrl = response?.request?.responseURL ?? '';
-            const contentType = String(response?.headers?.['content-type'] ?? '');
-
-            return [401, 403].includes(status)
-                || finalUrl.includes('/customer/login')
-                || contentType.includes('text/html');
+            return new Set(
+                items
+                    .map(item => item?.product_id ?? item?.product?.id ?? null)
+                    .filter(Boolean)
+            );
         };
 
-        const redirectToLogin = payload => {
-            if (! isLoginResponse(payload)) {
-                return false;
+        const resolveWishlistIds = axios => {
+            if (! isCustomerLoggedIn) {
+                debug('skip wishlist sync for guest');
+
+                return Promise.resolve(new Set());
             }
 
-            const response = payload?.response ?? payload;
-            const finalUrl = response?.request?.responseURL ?? loginUrl;
+            if (! wishlistIdsPromise) {
+                debug('fetching wishlist ids', wishlistIndexUrl);
 
-            window.location.href = finalUrl || loginUrl;
+                wishlistIdsPromise = axios.get(wishlistIndexUrl)
+                    .then(response => {
+                        if ([401, 403].includes(response?.status ?? null)) {
+                            debug('wishlist sync auth failure response', response?.status ?? null);
 
-            return true;
+                            return new Set();
+                        }
+
+                        const ids = extractWishlistIds(response);
+
+                        debug('wishlist ids loaded', [...ids]);
+
+                        return ids;
+                    })
+                    .catch(error => {
+                        if ([401, 403].includes(error?.response?.status ?? null)) {
+                            debug('wishlist sync auth failure error', error?.response?.status ?? null);
+
+                            return new Set();
+                        }
+
+                        debug('wishlist sync failed', error);
+
+                        return new Set();
+                    });
+            }
+
+            return wishlistIdsPromise;
+        };
+
+        const syncWishlistState = component => {
+            if (! isCustomerLoggedIn || ! component?.$axios) {
+                debug('skip component sync', {
+                    hasAxios: Boolean(component?.$axios),
+                    isCustomerLoggedIn,
+                });
+
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(component, 'isCustomer')) {
+                component.isCustomer = true;
+            }
+
+            const productId = resolveProductId(component, []);
+
+            if (! productId) {
+                debug('skip sync, missing product id');
+
+                return;
+            }
+
+            resolveWishlistIds(component.$axios).then(wishlistIds => {
+                const isWishlisted = wishlistIds.has(productId);
+
+                if (Object.prototype.hasOwnProperty.call(component, 'product') && component.product) {
+                    component.product.is_wishlist = isWishlisted;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(component, 'isWishlist')) {
+                    component.isWishlist = isWishlisted;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(component, 'isCustomer')) {
+                    component.isCustomer = true;
+                }
+
+                debug('synced component state', {
+                    productId,
+                    isWishlisted,
+                    component: component.$options?.name ?? component.$?.type?.name ?? 'unknown',
+                });
+            });
         };
 
         const resolveProductId = (component, args) => {
@@ -58,51 +125,25 @@
                 return definition;
             }
 
-            definition.methods.addToWishlist = function (...args) {
-                const productId = resolveProductId(this, args);
+            if (definition.__lscWishlistPatched) {
+                debug('component already patched', name);
 
-                if (! productId) {
-                    window.location.href = loginUrl;
+                return definition;
+            }
 
-                    return;
+            debug('patching component', name);
+
+            const originalMounted = definition.mounted;
+
+            definition.mounted = function (...args) {
+                if (typeof originalMounted === 'function') {
+                    originalMounted.apply(this, args);
                 }
 
-                this.$axios.post(wishlistUrl, {
-                    product_id: productId,
-                }).then(response => {
-                    if (redirectToLogin(response)) {
-                        return;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(this, 'product') && this.product) {
-                        this.product.is_wishlist = ! this.product.is_wishlist;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(this, 'isWishlist')) {
-                        this.isWishlist = ! this.isWishlist;
-                    }
-
-                    if (Object.prototype.hasOwnProperty.call(this, 'isCustomer')) {
-                        this.isCustomer = true;
-                    }
-
-                    const message = resolveMessage(response);
-
-                    if (message) {
-                        this.$emitter?.emit('add-flash', { type: 'success', message });
-                    }
-                }).catch(error => {
-                    if (redirectToLogin(error)) {
-                        return;
-                    }
-
-                    const message = resolveMessage(error);
-
-                    if (message) {
-                        this.$emitter?.emit('add-flash', { type: 'warning', message });
-                    }
-                });
+                syncWishlistState(this);
             };
+
+            definition.__lscWishlistPatched = true;
 
             return definition;
         };
@@ -116,6 +157,8 @@
 
             if (! vueApp || typeof vueApp.component !== 'function') {
                 if (attempt < 50) {
+                    debug('waiting for vue app', attempt);
+
                     window.setTimeout(() => installPatch(attempt + 1), 50);
                 }
 
@@ -125,6 +168,20 @@
             const originalComponent = vueApp.component.bind(vueApp);
 
             vueApp.component = (name, definition) => originalComponent(name, patchDefinition(name, definition));
+
+            ['v-product', 'v-product-card'].forEach(name => {
+                const definition = originalComponent(name);
+
+                if (! definition) {
+                    debug('component not registered yet', name);
+
+                    return;
+                }
+
+                originalComponent(name, patchDefinition(name, definition));
+            });
+
+            debug('wishlist patch installed');
 
             window[patchKey] = true;
         };
