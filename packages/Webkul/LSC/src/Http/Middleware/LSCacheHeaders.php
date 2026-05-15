@@ -6,6 +6,7 @@ use Closure;
 use Litespeed\LSCache\LSCacheMiddleware as BaseLSCacheMiddleware;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\CMS\Repositories\PageRepository;
+use Webkul\LSC\Support\CartCacheContext;
 use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 use Webkul\LSC\Support\LiteSpeedDebug;
 use Webkul\Marketing\Repositories\URLRewriteRepository;
@@ -101,6 +102,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
         $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
         $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
+        $response->headers->set('X-LiteSpeed-Vary', CartCacheContext::publicVaryHeader());
 
         return LiteSpeedDebug::attachToResponse($response, $tags, $lscacheControl);
     }
@@ -325,7 +327,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return ['category-products_'.$categoryId];
         }
 
-        return [];
+        return ['product-listing'];
     }
 
     /**

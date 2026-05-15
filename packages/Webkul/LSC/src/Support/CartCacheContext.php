@@ -12,6 +12,16 @@ class CartCacheContext
     private const PRIVATE_COOKIE = 'lsc_private';
 
     /**
+     * Unencrypted cookie used to vary public cache by customer group.
+     */
+    private const GROUP_COOKIE = 'lsc_customer_group';
+
+    /**
+     * Customer group code used for unauthenticated visitors.
+     */
+    private const GUEST_GROUP = 'guest';
+
+    /**
      * Cart-specific private cache scopes that should move together.
      */
     private const SCOPES = [
@@ -61,6 +71,36 @@ class CartCacheContext
     }
 
     /**
+     * The unencrypted cookie name used to vary public cache by customer group.
+     */
+    public static function groupCookieName(): string
+    {
+        return self::GROUP_COOKIE;
+    }
+
+    /**
+     * Resolve the customer group code for the current visitor.
+     */
+    public static function currentGroupCode(): string
+    {
+        $customer = auth()->guard('customer')->user();
+
+        return $customer?->group?->code ?: self::GUEST_GROUP;
+    }
+
+    /**
+     * Vary header for public cached pages: customer group, locale and currency.
+     */
+    public static function publicVaryHeader(): string
+    {
+        return 'cookie='.implode(',', [
+            self::GROUP_COOKIE,
+            'bagisto_locale',
+            'bagisto_currency',
+        ]);
+    }
+
+    /**
      * Stable private cookie value for the current cart context.
      */
     public static function privateCookieValue(?Request $request = null): string
@@ -106,49 +146,46 @@ class CartCacheContext
     }
 
     /**
-     * Route-specific tags plus the shared cart tags for the active context.
+     * Single route-scoped tag for the active context.
      */
     public static function responseTags(string $scope, ?Request $request = null): array
     {
-        $contextKey = self::responseContextKey($request);
-
-        return self::privateTagsForContext($contextKey, ['cart-private', $scope]);
+        return self::privateTagsForContext(self::responseContextKey($request), [$scope]);
     }
 
     /**
-     * Build private tags for an arbitrary private-cache family and scope.
+     * Single route-scoped tag for an arbitrary private-cache family.
+     *
+     * The $family parameter is retained for call-site compatibility but no
+     * longer produces a tag — one tag per route/scope is emitted instead.
      */
     public static function responseTagsForFamily(string $family, string $scope, ?Request $request = null): array
     {
-        $contextKey = self::responseContextKey($request);
-
-        return self::privateTagsForContext($contextKey, [$family, $scope]);
+        return self::privateTagsForContext(self::responseContextKey($request), [$scope]);
     }
 
     /**
-     * Current-context tags for an arbitrary private-cache family and scopes.
+     * Current-context tags for the given private-cache scopes.
      */
     public static function currentPrivateTagsForFamily(string $family, array $scopes, ?Request $request = null): array
     {
-        $contextKey = self::currentContextKey($request);
-
-        return self::privateTagsForContext($contextKey, array_merge([$family], $scopes));
+        return self::privateTagsForContext(self::currentContextKey($request), $scopes);
     }
 
     /**
-     * Customer-context tags for an arbitrary private-cache family and scopes.
+     * Customer-context tags for the given private-cache scopes.
      */
     public static function customerPrivateTagsForFamily(string $family, int $customerId, array $scopes): array
     {
-        return self::privateTagsForContext('customer_'.$customerId, array_merge([$family], $scopes));
+        return self::privateTagsForContext('customer_'.$customerId, $scopes);
     }
 
     /**
-     * Guest-context tags for an arbitrary private-cache family and scopes.
+     * Guest-context tags for the given private-cache scopes.
      */
     public static function guestPrivateTagsForFamily(string $family, array $scopes, ?Request $request = null): array
     {
-        return self::privateTagsForContext(self::guestContextKey($request), array_merge([$family], $scopes));
+        return self::privateTagsForContext(self::guestContextKey($request), $scopes);
     }
 
     /**
@@ -193,13 +230,15 @@ class CartCacheContext
 
     /**
      * Expand scopes into private cache tags.
+     *
+     * One tag per route/scope: "{scope}-{contextKey}". The context key already
+     * isolates per customer/guest, so a shared family tag is not needed.
      */
     private static function privateTagsForContext(string $contextKey, array $scopes): array
     {
         $tags = [];
 
         foreach ($scopes as $scope) {
-            $tags[] = $scope;
             $tags[] = $scope.'-'.$contextKey;
         }
 

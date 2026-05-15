@@ -11,6 +11,7 @@ use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeControlle
 use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
 use Webkul\LSC\Http\Controllers\Admin\Catalog\CategoryController;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
+use Webkul\LSC\Http\Middleware\CustomerGroupCookie;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
 use Webkul\LSC\Http\Middleware\PrivateCartCache;
@@ -25,7 +26,7 @@ class LSCServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        EncryptCookies::except('lsc_private');
+        EncryptCookies::except(['lsc_private', 'lsc_customer_group']);
 
         $this->registerConfig();
 
@@ -46,6 +47,8 @@ class LSCServiceProvider extends ServiceProvider
         $this->app->register(EventServiceProvider::class);
 
         $router->pushMiddlewareToGroup('web', PreventSensitiveRouteCaching::class);
+
+        $router->pushMiddlewareToGroup('web', CustomerGroupCookie::class);
 
         Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-auth-routes.php');
 
