@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 use Webkul\Product\Repositories\ProductReviewRepository;
 
 class Review
@@ -22,7 +22,7 @@ class Review
      */
     public function afterUpdate($review)
     {
-        LSCache::purgeTags(['product_'.$review->product->url_key]);
+        LSCache::purgeTags(['product_'.$review->product->id]);
     }
 
     /**
@@ -35,6 +35,6 @@ class Review
     {
         $review = $this->productReviewRepository->find($reviewId);
 
-        LSCache::purgeTags(['product_'.$review->product->url_key]);
+        LSCache::purgeTags(['product_'.$review->product->id]);
     }
 }

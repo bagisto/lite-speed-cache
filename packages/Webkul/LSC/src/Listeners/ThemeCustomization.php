@@ -2,21 +2,23 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
-use Webkul\LSC\Traits\DeletesAllCache;
+use Webkul\LSC\Support\CartCacheContext;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 
 class ThemeCustomization
 {
-    use DeletesAllCache;
-
     /**
      * After theme customization create
      *
      * @return void
      */
-    public function afterCreate()
+    public function afterCreate($theme)
     {
-        LSCache::purgeTags(['home']);
+        if ($theme->type == 'footer_links') {
+            LSCache::purgeAll();
+        } else {
+            LSCache::purgeTags(['home']);
+        }
     }
 
     /**
@@ -24,9 +26,13 @@ class ThemeCustomization
      *
      * @return void
      */
-    public function afterUpdate()
+    public function afterUpdate($theme)
     {
-        LSCache::purgeTags(['home']);
+        if ($theme->type == 'footer_links') {
+            LSCache::purgeAll();
+        } else {
+            LSCache::purgeTags(['home']);
+        }
     }
 
     /**
@@ -46,8 +52,6 @@ class ThemeCustomization
      */
     public function afterChange()
     {
-        $this->deletePrivCache();
-
-        LSCache::purgeTags(['home', 'home-header']);
+        LSCache::purgePrivateTags(CartCacheContext::currentPrivateTags(request()));
     }
 }

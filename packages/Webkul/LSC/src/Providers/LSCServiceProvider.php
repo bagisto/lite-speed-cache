@@ -3,11 +3,20 @@
 namespace Webkul\LSC\Providers;
 
 use Illuminate\Routing\Router;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Webkul\Admin\Http\Controllers\Catalog\CategoryController as BaseCategoryController;
+use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeController;
 use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
+use Webkul\LSC\Http\Controllers\Admin\Catalog\CategoryController;
+use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
+use Webkul\LSC\Http\Middleware\PrivateCartCache;
+use Webkul\LSC\Http\Middleware\PrivateCompareCache;
+use Webkul\LSC\Http\Middleware\PrivateWishlistCache;
+use Webkul\LSC\Http\Middleware\PreventSensitiveRouteCaching;
 
 class LSCServiceProvider extends ServiceProvider
 {
@@ -16,9 +25,13 @@ class LSCServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        EncryptCookies::except('lsc_private');
+
         $this->registerConfig();
 
         $this->registerCommands();
+
+        $this->disableOtherCaches();
     }
 
     /**
@@ -32,13 +45,51 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->app->register(EventServiceProvider::class);
 
+        $router->pushMiddlewareToGroup('web', PreventSensitiveRouteCaching::class);
+
+        Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-auth-routes.php');
+
+        Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-routes.php');
+
         $router->aliasMiddleware('no.lscache', NoLiteSpeedCache::class);
 
         $router->aliasMiddleware('lscache.response', LSCacheHeaders::class);
+        $router->aliasMiddleware('lscache.cart.private', PrivateCartCache::class);
+        $router->aliasMiddleware('lscache.compare.private', PrivateCompareCache::class);
+        $router->aliasMiddleware('lscache.wishlist.private', PrivateWishlistCache::class);
 
         Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/api.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/private-cart-routes.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/private-compare-routes.php');
+        Route::middleware(['web', 'shop', PreventRequestsDuringMaintenance::class])->group(__DIR__.'/../Routes/private-wishlist-routes.php');
+
+        $this->app['view']->prependNamespace('shop', __DIR__.'/../Resources/views/shop');
+
+        $this->app->bind(BaseCategoryController::class, CategoryController::class);
+        $this->app->bind(BaseThemeController::class, ThemeController::class);
 
         $this->publishFiles();
+
+        if (core()->getConfigData('lsc.configuration.cache_application.active')) {
+            $this->manageConfigMenus();
+        }
+    }
+
+    /**
+     * Disable other caching mechanisms when LSC is active.
+     * This ensures only LiteSpeed Cache is used for the project.
+     */
+    protected function disableOtherCaches(): void
+    {
+        /**
+         * Disable Laravel Response Cache when LSC package is installed
+         */
+        config(['responsecache.enabled' => false]);
+
+        /**
+         * Disable any other application-level caching that might conflict
+         */
+        // config(['cache.default' => 'array']);
     }
 
     /**
@@ -49,6 +100,17 @@ class LSCServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             dirname(__DIR__).'/Config/system.php',
             'core'
+        );
+    }
+
+    /**
+     * Manage the configuration of admin and supplier menus.
+     */
+    private function manageConfigMenus(): void
+    {
+        $this->mergeConfigFrom(
+            dirname(__DIR__).'/Config/admin/menu.php',
+            'menu.admin'
         );
     }
 
@@ -72,6 +134,10 @@ class LSCServiceProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__.'/../Routes/admin/web.php' => __DIR__.'/../../../Admin/src/Routes/web.php',
+
+            __DIR__.'/../Routes/admin/lsc-auth-routes.php' => __DIR__.'/../../../Admin/src/Routes/lsc-auth-routes.php',
+
+            __DIR__.'/../Routes/shop/api.php' => __DIR__.'/../../../Shop/src/Routes/api.php',
 
             __DIR__.'/../Routes/shop/store-front-routes.php' => __DIR__.'/../../../Shop/src/Routes/store-front-routes.php',
 

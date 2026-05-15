@@ -91,4 +91,4 @@ php artisan litespeed:install
 
 ### For more information about the LSCache, You can follow the [Official LiteSpeed Documentation](https://docs.litespeedtech.com/lscache/lsclaravel/installation/#installation)
 
-- Run your store.
+- Run your store successfully.

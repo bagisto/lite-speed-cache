@@ -12,15 +12,34 @@ class EventServiceProvider extends ServiceProvider
      * @var array
      */
     protected $listen = [
+        'catalog.product.create.after'  => [
+            'Webkul\LSC\Listeners\Product@afterCreate',
+        ],
+
+        'catalog.product.update.before' => [
+            'Webkul\LSC\Listeners\Product@beforeUpdate',
+        ],
+
         'catalog.product.update.after'  => [
             'Webkul\LSC\Listeners\Product@afterUpdate',
         ],
-
         'catalog.product.delete.before' => [
             'Webkul\LSC\Listeners\Product@beforeDelete',
         ],
 
+        'catalog.category.create.after' => [
+            'Webkul\LSC\Listeners\Category@afterUpdate',
+        ],
+
+        'catalog.category.update.before' => [
+            'Webkul\LSC\Listeners\Category@beforeUpdate',
+        ],
+
         'catalog.category.update.after' => [
+            'Webkul\LSC\Listeners\Category@afterUpdate',
+        ],
+
+        'catalog.categories.mass-update.after' => [
             'Webkul\LSC\Listeners\Category@afterUpdate',
         ],
 
@@ -36,15 +55,15 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\Review@beforeDelete',
         ],
 
-        'checkout.order.save.after'     => [
+        'checkout.order.save.after' => [
             'Webkul\LSC\Listeners\Order@afterCancelOrCreate',
         ],
 
-        'sales.order.cancel.after'      => [
+        'sales.order.cancel.after' => [
             'Webkul\LSC\Listeners\Order@afterCancelOrCreate',
         ],
 
-        'sales.refund.save.after'       => [
+        'sales.refund.save.after' => [
             'Webkul\LSC\Listeners\Refund@afterCreate',
         ],
 
@@ -54,6 +73,56 @@ class EventServiceProvider extends ServiceProvider
 
         'cms.page.delete.before' => [
             'Webkul\LSC\Listeners\Page@beforeDelete',
+        ],
+
+        'customer.compare.create.after' => [
+            'Webkul\LSC\Listeners\Compare@afterUpdate',
+        ],
+
+        'customer.compare.delete.before' => [
+            'Webkul\LSC\Listeners\Compare@beforeDelete',
+        ],
+
+        'customer.compare.delete-all.before' => [
+            'Webkul\LSC\Listeners\Compare@beforeDelete',
+        ],
+
+        'customer.wishlist.create.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.wishlist.delete.before' => [
+            'Webkul\LSC\Listeners\Wishlist@beforeChange',
+        ],
+
+        'customer.wishlist.delete.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.wishlist.delete-all.before' => [
+            'Webkul\LSC\Listeners\Wishlist@beforeDeleteAll',
+        ],
+
+        'customer.wishlist.delete-all.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.wishlist.move-to-cart.before' => [
+            'Webkul\LSC\Listeners\Wishlist@beforeChange',
+        ],
+
+        'customer.wishlist.move-to-cart.after' => [
+            'Webkul\LSC\Listeners\Wishlist@afterChange',
+        ],
+
+        'customer.after.login' => [
+            'Webkul\LSC\Listeners\Session@session',
+            'Webkul\LSC\Listeners\CustomerSession@afterCreate',
+        ],
+
+        'customer.after.logout' => [
+            'Webkul\LSC\Listeners\Session@session',
+            'Webkul\LSC\Listeners\CustomerSession@afterDestroy',
         ],
 
         'theme_customization.create.after' => [
@@ -80,6 +149,10 @@ class EventServiceProvider extends ServiceProvider
             'Webkul\LSC\Listeners\URLRewrite@afterUpdate',
         ],
 
+        'marketing.search_seo.url_rewrites.update.before' => [
+            'Webkul\LSC\Listeners\URLRewrite@beforeUpdate',
+        ],
+
         'marketing.search_seo.url_rewrites.delete.before' => [
             'Webkul\LSC\Listeners\URLRewrite@beforeDelete',
         ],
@@ -94,10 +167,6 @@ class EventServiceProvider extends ServiceProvider
 
         'checkout.cart.delete.before' => [
             'Webkul\LSC\Listeners\ThemeCustomization@afterChange',
-        ],
-
-        'customer.after.login' => [
-            'Webkul\LSC\Listeners\CustomerSession@afterCreate',
         ],
     ];
 }

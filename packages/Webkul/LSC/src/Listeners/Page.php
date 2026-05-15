@@ -2,8 +2,8 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
 use Webkul\CMS\Repositories\PageRepository;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 
 class Page
 {
@@ -22,7 +22,7 @@ class Page
      */
     public function afterUpdate($page)
     {
-        LSCache::purgeTags(['page_'.$page->url_key]);
+        LSCache::purgeTags(['page_'.$page->id]);
     }
 
     /**
@@ -35,6 +35,6 @@ class Page
     {
         $page = $this->pageRepository->find($pageId);
 
-        LSCache::purgeTags(['page_'.$page->url_key]);
+        LSCache::purgeTags(['page_'.$page->id]);
     }
 }

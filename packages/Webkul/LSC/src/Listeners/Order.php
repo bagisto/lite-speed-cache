@@ -2,7 +2,7 @@
 
 namespace Webkul\LSC\Listeners;
 
-use LSCache;
+use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 
 class Order extends Product
 {

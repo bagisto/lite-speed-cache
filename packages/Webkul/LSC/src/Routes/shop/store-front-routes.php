@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Webkul\Shop\Http\Controllers\API\CartController;
 use Webkul\Shop\Http\Controllers\BookingProductController;
 use Webkul\Shop\Http\Controllers\CompareController;
 use Webkul\Shop\Http\Controllers\HomeController;
@@ -14,7 +13,7 @@ use Webkul\Shop\Http\Controllers\SubscriptionController;
 /**
  * CMS pages.
  */
-Route::middleware(['lscache.response', 'cache.response'])->group(function () {
+Route::middleware(['lscache.response'])->group(function () {
     Route::get('page/{slug}', [PageController::class, 'view'])
         ->name('shop.cms.page');
 
@@ -34,18 +33,6 @@ Route::middleware(['lscache.response', 'cache.response'])->group(function () {
         ->name('shop.home.contact_us');
 
     /**
-     * Store front cart.
-     */
-    Route::get('api/checkout/cart', [CartController::class, 'index'])
-        ->name('shop.api.checkout.cart.index');
-
-    Route::post('api/checkout/cart', [CartController::class, 'store'])
-        ->name('shop.api.checkout.cart.store');
-
-    Route::delete('api/checkout/cart', [CartController::class, 'destroy'])
-        ->name('shop.api.checkout.cart.destroy');
-
-    /**
      * Store front search.
      */
     Route::get('search', [SearchController::class, 'index'])
@@ -62,8 +49,7 @@ Route::middleware(['lscache.response', 'cache.response'])->group(function () {
  * Contact us form submit route.
  */
 Route::post('contact-us/send-mail', [HomeController::class, 'sendContactUsMail'])
-    ->name('shop.home.contact_us.send_mail')
-    ->middleware('cache.response');
+    ->name('shop.home.contact_us.send_mail');
 
 /**
  * Search upload route.
