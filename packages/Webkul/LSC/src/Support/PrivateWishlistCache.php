@@ -3,6 +3,7 @@
 namespace Webkul\LSC\Support;
 
 use Illuminate\Http\Request;
+use Webkul\Customer\Repositories\WishlistRepository;
 
 class PrivateWishlistCache
 {
@@ -12,7 +13,10 @@ class PrivateWishlistCache
     public static function apply(mixed $response, Request $request, string $scope): mixed
     {
         $ttl = max(60, (int) config('lscache.private_ttl', 300));
-        $tags = CartCacheContext::responseTagsForFamily('wishlist-private', $scope, $request);
+        $tags = array_merge(
+            CartCacheContext::responseTagsForFamily('wishlist-private', $scope, $request),
+            self::productTags()
+        );
         $cacheControl = 'private,max-age='.$ttl;
         $privateCookieName = CartCacheContext::privateCookieName();
         $privateCookieValue = CartCacheContext::privateCookieValue($request);
@@ -36,6 +40,34 @@ class PrivateWishlistCache
         ));
 
         return LiteSpeedDebug::attachToResponse($response, $tags, $cacheControl);
+    }
+
+    /**
+     * Catalog content tags for every product on the customer's wishlist.
+     *
+     * Tagging the cached wishlist with "product_{id}" lets the existing
+     * Product listener purge invalidate it whenever one of its products
+     * changes — no extra listener code needed.
+     */
+    protected static function productTags(): array
+    {
+        try {
+            $customerId = auth()->guard('customer')->id();
+
+            if (! $customerId) {
+                return [];
+            }
+
+            $ids = app(WishlistRepository::class)
+                ->where(['customer_id' => $customerId])
+                ->get()
+                ->pluck('product_id')
+                ->all();
+
+            return CartCacheContext::productTags($ids);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

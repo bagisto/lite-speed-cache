@@ -4,6 +4,7 @@ namespace Webkul\LSC\Support;
 
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
+use Webkul\Checkout\Facades\Cart;
 
 class PrivateCartCache
 {
@@ -13,7 +14,10 @@ class PrivateCartCache
     public static function apply(mixed $response, Request $request, string $scope): mixed
     {
         $ttl = CartCacheContext::privateTtl();
-        $tags = CartCacheContext::responseTags($scope, $request);
+        $tags = array_merge(
+            CartCacheContext::responseTags($scope, $request),
+            self::productTags()
+        );
         $cacheControl = 'private,max-age='.$ttl;
         $privateCookieName = CartCacheContext::privateCookieName();
         $privateCookieValue = CartCacheContext::privateCookieValue($request);
@@ -37,6 +41,38 @@ class PrivateCartCache
         ));
 
         return LiteSpeedDebug::attachToResponse($response, $tags, $cacheControl);
+    }
+
+    /**
+     * Catalog content tags for every product currently in the cart.
+     *
+     * Tagging the cached cart with "product_{id}" lets the existing Product
+     * listener purge invalidate this cart whenever one of its products
+     * changes — no extra listener code needed.
+     */
+    protected static function productTags(): array
+    {
+        try {
+            $cart = Cart::getCart();
+
+            if (! $cart) {
+                return [];
+            }
+
+            $ids = [];
+
+            foreach ($cart->items as $item) {
+                $ids[] = $item->product_id;
+
+                foreach ($item->children as $child) {
+                    $ids[] = $child->product_id;
+                }
+            }
+
+            return CartCacheContext::productTags($ids);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

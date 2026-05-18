@@ -3,6 +3,7 @@
 namespace Webkul\LSC\Support;
 
 use Illuminate\Http\Request;
+use Webkul\Customer\Repositories\CompareItemRepository;
 
 class PrivateCompareCache
 {
@@ -12,7 +13,10 @@ class PrivateCompareCache
     public static function apply(mixed $response, Request $request, string $scope): mixed
     {
         $ttl = max(60, (int) config('lscache.private_ttl', 300));
-        $tags = CartCacheContext::responseTagsForFamily('compare-private', $scope, $request);
+        $tags = array_merge(
+            CartCacheContext::responseTagsForFamily('compare-private', $scope, $request),
+            self::productTags($request)
+        );
         $cacheControl = 'private,max-age='.$ttl;
         $privateCookieName = CartCacheContext::privateCookieName();
         $privateCookieValue = CartCacheContext::privateCookieValue($request);
@@ -36,6 +40,32 @@ class PrivateCompareCache
         ));
 
         return LiteSpeedDebug::attachToResponse($response, $tags, $cacheControl);
+    }
+
+    /**
+     * Catalog content tags for every product in the compare list.
+     *
+     * Customers store compare items in the database; guests pass them as the
+     * "product_ids" request input. Tagging the cached compare list with
+     * "product_{id}" lets the existing Product listener purge invalidate it
+     * whenever one of its products changes — no extra listener code needed.
+     */
+    protected static function productTags(Request $request): array
+    {
+        try {
+            if ($customerId = auth()->guard('customer')->id()) {
+                $ids = app(CompareItemRepository::class)
+                    ->findByField('customer_id', $customerId)
+                    ->pluck('product_id')
+                    ->all();
+            } else {
+                $ids = (array) $request->input('product_ids', []);
+            }
+
+            return CartCacheContext::productTags($ids);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

@@ -244,4 +244,28 @@ class CartCacheContext
 
         return array_values(array_unique(array_filter($tags)));
     }
+
+    /**
+     * Build catalog content tags ("product_{id}") for a set of product ids.
+     *
+     * These reuse the same tag namespace emitted on public product pages, so
+     * the existing Product listener purge — LSCache::purgeTags(['product_{id}'])
+     * — also evicts any private cart / wishlist / compare entry displaying the
+     * product. This keeps those private caches in sync with catalog price /
+     * data changes without any extra listener code.
+     */
+    public static function productTags(array $productIds): array
+    {
+        $tags = [];
+
+        foreach ($productIds as $id) {
+            $id = (int) $id;
+
+            if ($id > 0) {
+                $tags['product_'.$id] = 'product_'.$id;
+            }
+        }
+
+        return array_values($tags);
+    }
 }
