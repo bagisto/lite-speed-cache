@@ -212,12 +212,23 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
 
     /**
      * Get cache control header value.
+     *
+     * When ESI is enabled, append `esi=on` so LiteSpeed parses the cached page
+     * body for <esi:include> tags and assembles the per-user fragments at the
+     * edge. (Ignored by OpenLiteSpeed, which has no ESI support — hence the
+     * esiEnabled() guard is only ever true on LiteSpeed Web Server Enterprise.)
      */
     private function getCacheControlHeader($ttl): string
     {
         $cacheability = env('LSCACHE_DEFAULT_CACHEABILITY', 'public');
 
-        return "$cacheability, max-age=$ttl";
+        $control = "$cacheability, max-age=$ttl";
+
+        if (CartCacheContext::esiEnabled()) {
+            $control .= ',esi=on';
+        }
+
+        return $control;
     }
 
     /**

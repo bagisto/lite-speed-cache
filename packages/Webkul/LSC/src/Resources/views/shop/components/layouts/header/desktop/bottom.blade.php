@@ -136,7 +136,12 @@
                 </x-slot>
 
                 <x-slot:content>
-                    <v-login-desktop-dropdown />
+                    @if (\Webkul\LSC\Support\CartCacheContext::esiEnabled())
+                        {{-- ESI: LiteSpeed assembles the per-user login dropdown at the edge (no AJAX flash) --}}
+                        <esi:include src='{{ route('shop.api.home.esi.login_desktop_dropdown', [], false) }}' cache-control='private' cache-tag='login' />
+                    @else
+                        <v-login-desktop-dropdown />
+                    @endif
                 </x-slot:content>
             </x-shop::dropdown>
 

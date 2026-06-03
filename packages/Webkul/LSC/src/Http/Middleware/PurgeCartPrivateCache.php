@@ -24,7 +24,11 @@ class PurgeCartPrivateCache
             return $response;
         }
 
-        $privateTags = CartCacheContext::currentPrivateTags($request);
+        $privateTags = array_merge(
+            CartCacheContext::currentPrivateTags($request),
+            // ESI mini-cart count badge for the current context.
+            CartCacheContext::currentPrivateTagsForFamily('cart-count', ['cart-count'], $request)
+        );
         $urls = [
             '/api/checkout/cart',
             '/api/checkout/cart/cross-sell',

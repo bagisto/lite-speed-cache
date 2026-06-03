@@ -73,7 +73,18 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->publishFiles();
 
-        if (core()->getConfigData('lsc.configuration.cache_application.active')) {
+        // Guard the boot-time DB read. core()->getConfigData() resolves the current channel
+        // from the database; on a not-yet-installed store the channels table is missing
+        // (before migrations) or empty (after migrations, before seeding), and getCurrentChannelCode()
+        // then returns null against a string return type — a fatal that would break every
+        // artisan command (migrate, install, seed). Swallow it until the store is installed.
+        try {
+            $lscActive = (bool) core()->getConfigData('lsc.configuration.cache_application.active');
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if ($lscActive) {
             $this->manageConfigMenus();
         }
     }

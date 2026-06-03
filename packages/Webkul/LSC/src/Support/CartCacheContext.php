@@ -39,6 +39,19 @@ class CartCacheContext
     }
 
     /**
+     * Determine whether ESI (Edge Side Includes) should be used.
+     *
+     * Requires both the ESI flag (LSCACHE_ESI_ENABLED, only meaningful on
+     * LiteSpeed Web Server Enterprise — OpenLiteSpeed has no ESI support) and
+     * LSC itself to be active. Templates branch on this to emit <esi:include>
+     * tags instead of the AJAX/Vue hole-punching fallback.
+     */
+    public static function esiEnabled(): bool
+    {
+        return (bool) config('lscache.esi') && self::privateCacheEnabled();
+    }
+
+    /**
      * Resolve the cart private cache TTL.
      */
     public static function privateTtl(): int

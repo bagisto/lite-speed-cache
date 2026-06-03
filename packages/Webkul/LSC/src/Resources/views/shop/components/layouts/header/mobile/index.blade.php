@@ -67,7 +67,12 @@
                         </x-slot>
 
                         <x-slot:content>
-                            <v-login-mobile-dropdown showWishlist="{{ $showWishlist }}"></v-login-mobile-dropdown>
+                            @if (\Webkul\LSC\Support\CartCacheContext::esiEnabled())
+                                {{-- ESI: LiteSpeed assembles the per-user login dropdown at the edge --}}
+                                <esi:include src='{{ route('shop.api.home.esi.login_mobile_dropdown', [], false) }}' cache-control='private' cache-tag='login' />
+                            @else
+                                <v-login-mobile-dropdown showWishlist="{{ $showWishlist }}"></v-login-mobile-dropdown>
+                            @endif
                         </x-slot:content>
                     </x-shop::dropdown>
                 </div>
@@ -159,7 +164,7 @@
 
             <x-slot:content class="!p-0">
                 <!-- Account Profile Hero Section -->
-                <div ref="lsc_mobile_drawer"></div>
+                <div ref="lsc_mobile_drawer">@if (\Webkul\LSC\Support\CartCacheContext::esiEnabled())<esi:include src='{{ route('shop.api.home.esi.login_mobile_drawer', [], false) }}' cache-control='private' cache-tag='login' />@endif</div>
 
                 {!! view_render_event('bagisto.shop.components.layouts.header.mobile.drawer.categories.before') !!}
 
@@ -447,7 +452,9 @@
             template: '#v-mobile-drawer-template',
 
             mounted() {
-                this.getLoginMobileDrawer();
+                @if (! \Webkul\LSC\Support\CartCacheContext::esiEnabled())
+                    this.getLoginMobileDrawer();
+                @endif
             },
 
             methods: {
