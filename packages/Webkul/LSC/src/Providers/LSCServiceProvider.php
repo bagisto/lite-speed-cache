@@ -16,6 +16,7 @@ use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
 use Webkul\LSC\Http\Middleware\PrivateCartCache;
 use Webkul\LSC\Http\Middleware\PrivateCompareCache;
+use Webkul\LSC\Http\Middleware\PrivateVaryCookie;
 use Webkul\LSC\Http\Middleware\PrivateWishlistCache;
 use Webkul\LSC\Http\Middleware\PreventSensitiveRouteCaching;
 
@@ -45,6 +46,11 @@ class LSCServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'lsc');
 
         $this->app->register(EventServiceProvider::class);
+
+        // Outermost of the LSC web middleware so its unwinding pass can read the
+        // final X-LiteSpeed-Cache-Control (set by PreventSensitiveRouteCaching /
+        // LSCacheHeaders) when deciding whether the response is publicly cached.
+        $router->pushMiddlewareToGroup('web', PrivateVaryCookie::class);
 
         $router->pushMiddlewareToGroup('web', PreventSensitiveRouteCaching::class);
 

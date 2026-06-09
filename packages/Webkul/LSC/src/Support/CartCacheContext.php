@@ -52,6 +52,26 @@ class CartCacheContext
     }
 
     /**
+     * Append the ESI assembly flag to a LiteSpeed cache-control value.
+     *
+     * Every page LiteSpeed serves — public (home, product, category), no-cache
+     * (account, checkout) or privately cached (cart, compare, wishlist) — still
+     * renders the common header, which carries the per-user <esi:include>
+     * fragments (login dropdown, cart count). LiteSpeed only assembles those
+     * fragments when the parent response advertises esi=on, so the flag must be
+     * present on EVERY response variant, not just the publicly cached ones.
+     *
+     * Centralising it here keeps every cache-control call site from drifting
+     * apart: LSCacheHeaders (cached + no-cache paths), PreventSensitiveRouteCaching
+     * (sensitive/account pages) and the three Private*Cache classes (cart,
+     * compare, wishlist).
+     */
+    public static function withEsi(string $cacheControl): string
+    {
+        return self::esiEnabled() ? $cacheControl.',esi=on' : $cacheControl;
+    }
+
+    /**
      * Resolve the cart private cache TTL.
      */
     public static function privateTtl(): int

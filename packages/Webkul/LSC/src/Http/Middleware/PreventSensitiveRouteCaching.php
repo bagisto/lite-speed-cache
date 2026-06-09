@@ -58,12 +58,18 @@ class PreventSensitiveRouteCaching
             return $response;
         }
 
+        // These sensitive pages (customer account, checkout, login, …) are never
+        // stored, but they still render the common header with its per-user
+        // <esi:include> fragments. Advertise esi=on so LiteSpeed assembles them;
+        // without it the login dropdown / cart count stay hidden here too.
+        $lscacheControl = CartCacheContext::withEsi('no-cache');
+
         $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private');
         $response->headers->set('Pragma', 'no-cache');
         $response->headers->set('Expires', '0');
-        $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
+        $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
 
-        return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
+        return LiteSpeedDebug::attachToResponse($response, [], $lscacheControl);
     }
 
     /**

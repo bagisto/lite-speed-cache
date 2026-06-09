@@ -18,7 +18,7 @@ class PrivateCartCache
             CartCacheContext::responseTags($scope, $request),
             self::productTags()
         );
-        $cacheControl = 'private,max-age='.$ttl;
+        $cacheControl = CartCacheContext::withEsi('private,max-age='.$ttl);
         $privateCookieName = CartCacheContext::privateCookieName();
         $privateCookieValue = CartCacheContext::privateCookieValue($request);
 

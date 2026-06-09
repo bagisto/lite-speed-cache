@@ -222,13 +222,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     {
         $cacheability = env('LSCACHE_DEFAULT_CACHEABILITY', 'public');
 
-        $control = "$cacheability, max-age=$ttl";
-
-        if (CartCacheContext::esiEnabled()) {
-            $control .= ',esi=on';
-        }
-
-        return $control;
+        return CartCacheContext::withEsi("$cacheability, max-age=$ttl");
     }
 
     /**
@@ -362,8 +356,15 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     {
         $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-        $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
+        // The header layout is common to every page and carries the per-user
+        // <esi:include> fragments (login dropdown, cart count). LiteSpeed only
+        // assembles those when the response advertises esi=on, so emit it on
+        // non-cached pages too — see CartCacheContext::withEsi(). Without it the
+        // fragments leak unresolved on every route outside $cacheRoutes.
+        $lscacheControl = CartCacheContext::withEsi('no-cache');
 
-        return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
+        $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
+
+        return LiteSpeedDebug::attachToResponse($response, [], $lscacheControl);
     }
 }

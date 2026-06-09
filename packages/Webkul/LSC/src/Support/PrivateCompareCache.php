@@ -17,7 +17,7 @@ class PrivateCompareCache
             CartCacheContext::responseTagsForFamily('compare-private', $scope, $request),
             self::productTags($request)
         );
-        $cacheControl = 'private,max-age='.$ttl;
+        $cacheControl = CartCacheContext::withEsi('private,max-age='.$ttl);
         $privateCookieName = CartCacheContext::privateCookieName();
         $privateCookieValue = CartCacheContext::privateCookieValue($request);
 
