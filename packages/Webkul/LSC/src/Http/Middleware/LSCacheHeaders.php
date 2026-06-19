@@ -6,6 +6,7 @@ use Closure;
 use Litespeed\LSCache\LSCacheMiddleware as BaseLSCacheMiddleware;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\CMS\Repositories\PageRepository;
+use Webkul\LSC\Support\CartCacheContext;
 use Webkul\LSC\Support\DebuggableLSCache as LSCache;
 use Webkul\LSC\Support\LiteSpeedDebug;
 use Webkul\Marketing\Repositories\URLRewriteRepository;
@@ -101,6 +102,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
         $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
         $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
         $response->headers->set('X-LiteSpeed-Tag', implode(',', $tags));
+        $response->headers->set('X-LiteSpeed-Vary', CartCacheContext::publicVaryHeader());
 
         return LiteSpeedDebug::attachToResponse($response, $tags, $lscacheControl);
     }
@@ -210,12 +212,17 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
 
     /**
      * Get cache control header value.
+     *
+     * When ESI is enabled, append `esi=on` so LiteSpeed parses the cached page
+     * body for <esi:include> tags and assembles the per-user fragments at the
+     * edge. (Ignored by OpenLiteSpeed, which has no ESI support — hence the
+     * esiEnabled() guard is only ever true on LiteSpeed Web Server Enterprise.)
      */
     private function getCacheControlHeader($ttl): string
     {
         $cacheability = env('LSCACHE_DEFAULT_CACHEABILITY', 'public');
 
-        return "$cacheability, max-age=$ttl";
+        return CartCacheContext::withEsi("$cacheability, max-age=$ttl");
     }
 
     /**
@@ -325,7 +332,7 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
             return ['category-products_'.$categoryId];
         }
 
-        return [];
+        return ['product-listing'];
     }
 
     /**
@@ -349,8 +356,15 @@ class LSCacheHeaders extends BaseLSCacheMiddleware
     {
         $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-        $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
+        // The header layout is common to every page and carries the per-user
+        // <esi:include> fragments (login dropdown, cart count). LiteSpeed only
+        // assembles those when the response advertises esi=on, so emit it on
+        // non-cached pages too — see CartCacheContext::withEsi(). Without it the
+        // fragments leak unresolved on every route outside $cacheRoutes.
+        $lscacheControl = CartCacheContext::withEsi('no-cache');
 
-        return LiteSpeedDebug::attachToResponse($response, [], 'no-cache');
+        $response->headers->set('X-LiteSpeed-Cache-Control', $lscacheControl);
+
+        return LiteSpeedDebug::attachToResponse($response, [], $lscacheControl);
     }
 }

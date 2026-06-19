@@ -54,7 +54,7 @@ class Product
     public function afterCreate($product)
     {
         try {
-            LSCache::purgeTags(array_merge(['home', 'search'], $this->getCategoryTags($product)));
+            LSCache::purgeTags(array_merge(['home', 'search', 'product-listing'], $this->getCategoryTags($product)));
 
             $this->deletePrivCache();
         } catch (\Throwable $e) {
@@ -128,7 +128,7 @@ class Product
      */
     public function getForgettableUrls($product, array $extraCategoryIds = [])
     {
-        $urls = ['search'];
+        $urls = ['search', 'product-listing'];
 
         $products = $this->getAllRelatedProducts($product);
 

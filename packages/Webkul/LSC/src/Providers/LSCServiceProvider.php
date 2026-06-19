@@ -11,10 +11,12 @@ use Webkul\Admin\Http\Controllers\Settings\ThemeController as BaseThemeControlle
 use Webkul\Core\Http\Middleware\PreventRequestsDuringMaintenance;
 use Webkul\LSC\Http\Controllers\Admin\Catalog\CategoryController;
 use Webkul\LSC\Http\Controllers\Admin\Settings\ThemeController;
+use Webkul\LSC\Http\Middleware\CustomerGroupCookie;
 use Webkul\LSC\Http\Middleware\LSCacheHeaders;
 use Webkul\LSC\Http\Middleware\NoLiteSpeedCache;
 use Webkul\LSC\Http\Middleware\PrivateCartCache;
 use Webkul\LSC\Http\Middleware\PrivateCompareCache;
+use Webkul\LSC\Http\Middleware\PrivateVaryCookie;
 use Webkul\LSC\Http\Middleware\PrivateWishlistCache;
 use Webkul\LSC\Http\Middleware\PreventSensitiveRouteCaching;
 
@@ -25,7 +27,7 @@ class LSCServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        EncryptCookies::except('lsc_private');
+        EncryptCookies::except(['lsc_private', 'lsc_customer_group']);
 
         $this->registerConfig();
 
@@ -45,7 +47,14 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->app->register(EventServiceProvider::class);
 
+        // Outermost of the LSC web middleware so its unwinding pass can read the
+        // final X-LiteSpeed-Cache-Control (set by PreventSensitiveRouteCaching /
+        // LSCacheHeaders) when deciding whether the response is publicly cached.
+        $router->pushMiddlewareToGroup('web', PrivateVaryCookie::class);
+
         $router->pushMiddlewareToGroup('web', PreventSensitiveRouteCaching::class);
+
+        $router->pushMiddlewareToGroup('web', CustomerGroupCookie::class);
 
         Route::middleware('web')->group(__DIR__.'/../Routes/admin/lsc-auth-routes.php');
 
@@ -70,7 +79,18 @@ class LSCServiceProvider extends ServiceProvider
 
         $this->publishFiles();
 
-        if (core()->getConfigData('lsc.configuration.cache_application.active')) {
+        // Guard the boot-time DB read. core()->getConfigData() resolves the current channel
+        // from the database; on a not-yet-installed store the channels table is missing
+        // (before migrations) or empty (after migrations, before seeding), and getCurrentChannelCode()
+        // then returns null against a string return type — a fatal that would break every
+        // artisan command (migrate, install, seed). Swallow it until the store is installed.
+        try {
+            $lscActive = (bool) core()->getConfigData('lsc.configuration.cache_application.active');
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if ($lscActive) {
             $this->manageConfigMenus();
         }
     }

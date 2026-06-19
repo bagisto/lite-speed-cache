@@ -12,6 +12,16 @@ class CartCacheContext
     private const PRIVATE_COOKIE = 'lsc_private';
 
     /**
+     * Unencrypted cookie used to vary public cache by customer group.
+     */
+    private const GROUP_COOKIE = 'lsc_customer_group';
+
+    /**
+     * Customer group code used for unauthenticated visitors.
+     */
+    private const GUEST_GROUP = 'guest';
+
+    /**
      * Cart-specific private cache scopes that should move together.
      */
     private const SCOPES = [
@@ -26,6 +36,39 @@ class CartCacheContext
     public static function privateCacheEnabled(): bool
     {
         return (bool) core()->getConfigData('lsc.configuration.cache_application.active');
+    }
+
+    /**
+     * Determine whether ESI (Edge Side Includes) should be used.
+     *
+     * Requires both the ESI flag (LSCACHE_ESI_ENABLED, only meaningful on
+     * LiteSpeed Web Server Enterprise — OpenLiteSpeed has no ESI support) and
+     * LSC itself to be active. Templates branch on this to emit <esi:include>
+     * tags instead of the AJAX/Vue hole-punching fallback.
+     */
+    public static function esiEnabled(): bool
+    {
+        return (bool) config('lscache.esi') && self::privateCacheEnabled();
+    }
+
+    /**
+     * Append the ESI assembly flag to a LiteSpeed cache-control value.
+     *
+     * Every page LiteSpeed serves — public (home, product, category), no-cache
+     * (account, checkout) or privately cached (cart, compare, wishlist) — still
+     * renders the common header, which carries the per-user <esi:include>
+     * fragments (login dropdown, cart count). LiteSpeed only assembles those
+     * fragments when the parent response advertises esi=on, so the flag must be
+     * present on EVERY response variant, not just the publicly cached ones.
+     *
+     * Centralising it here keeps every cache-control call site from drifting
+     * apart: LSCacheHeaders (cached + no-cache paths), PreventSensitiveRouteCaching
+     * (sensitive/account pages) and the three Private*Cache classes (cart,
+     * compare, wishlist).
+     */
+    public static function withEsi(string $cacheControl): string
+    {
+        return self::esiEnabled() ? $cacheControl.',esi=on' : $cacheControl;
     }
 
     /**
@@ -58,6 +101,36 @@ class CartCacheContext
     public static function privateCookieName(): string
     {
         return self::PRIVATE_COOKIE;
+    }
+
+    /**
+     * The unencrypted cookie name used to vary public cache by customer group.
+     */
+    public static function groupCookieName(): string
+    {
+        return self::GROUP_COOKIE;
+    }
+
+    /**
+     * Resolve the customer group code for the current visitor.
+     */
+    public static function currentGroupCode(): string
+    {
+        $customer = auth()->guard('customer')->user();
+
+        return $customer?->group?->code ?: self::GUEST_GROUP;
+    }
+
+    /**
+     * Vary header for public cached pages: customer group, locale and currency.
+     */
+    public static function publicVaryHeader(): string
+    {
+        return 'cookie='.implode(',', [
+            self::GROUP_COOKIE,
+            'bagisto_locale',
+            'bagisto_currency',
+        ]);
     }
 
     /**
@@ -106,49 +179,46 @@ class CartCacheContext
     }
 
     /**
-     * Route-specific tags plus the shared cart tags for the active context.
+     * Single route-scoped tag for the active context.
      */
     public static function responseTags(string $scope, ?Request $request = null): array
     {
-        $contextKey = self::responseContextKey($request);
-
-        return self::privateTagsForContext($contextKey, ['cart-private', $scope]);
+        return self::privateTagsForContext(self::responseContextKey($request), [$scope]);
     }
 
     /**
-     * Build private tags for an arbitrary private-cache family and scope.
+     * Single route-scoped tag for an arbitrary private-cache family.
+     *
+     * The $family parameter is retained for call-site compatibility but no
+     * longer produces a tag — one tag per route/scope is emitted instead.
      */
     public static function responseTagsForFamily(string $family, string $scope, ?Request $request = null): array
     {
-        $contextKey = self::responseContextKey($request);
-
-        return self::privateTagsForContext($contextKey, [$family, $scope]);
+        return self::privateTagsForContext(self::responseContextKey($request), [$scope]);
     }
 
     /**
-     * Current-context tags for an arbitrary private-cache family and scopes.
+     * Current-context tags for the given private-cache scopes.
      */
     public static function currentPrivateTagsForFamily(string $family, array $scopes, ?Request $request = null): array
     {
-        $contextKey = self::currentContextKey($request);
-
-        return self::privateTagsForContext($contextKey, array_merge([$family], $scopes));
+        return self::privateTagsForContext(self::currentContextKey($request), $scopes);
     }
 
     /**
-     * Customer-context tags for an arbitrary private-cache family and scopes.
+     * Customer-context tags for the given private-cache scopes.
      */
     public static function customerPrivateTagsForFamily(string $family, int $customerId, array $scopes): array
     {
-        return self::privateTagsForContext('customer_'.$customerId, array_merge([$family], $scopes));
+        return self::privateTagsForContext('customer_'.$customerId, $scopes);
     }
 
     /**
-     * Guest-context tags for an arbitrary private-cache family and scopes.
+     * Guest-context tags for the given private-cache scopes.
      */
     public static function guestPrivateTagsForFamily(string $family, array $scopes, ?Request $request = null): array
     {
-        return self::privateTagsForContext(self::guestContextKey($request), array_merge([$family], $scopes));
+        return self::privateTagsForContext(self::guestContextKey($request), $scopes);
     }
 
     /**
@@ -193,16 +263,42 @@ class CartCacheContext
 
     /**
      * Expand scopes into private cache tags.
+     *
+     * One tag per route/scope: "{scope}-{contextKey}". The context key already
+     * isolates per customer/guest, so a shared family tag is not needed.
      */
     private static function privateTagsForContext(string $contextKey, array $scopes): array
     {
         $tags = [];
 
         foreach ($scopes as $scope) {
-            $tags[] = $scope;
             $tags[] = $scope.'-'.$contextKey;
         }
 
         return array_values(array_unique(array_filter($tags)));
+    }
+
+    /**
+     * Build catalog content tags ("product_{id}") for a set of product ids.
+     *
+     * These reuse the same tag namespace emitted on public product pages, so
+     * the existing Product listener purge — LSCache::purgeTags(['product_{id}'])
+     * — also evicts any private cart / wishlist / compare entry displaying the
+     * product. This keeps those private caches in sync with catalog price /
+     * data changes without any extra listener code.
+     */
+    public static function productTags(array $productIds): array
+    {
+        $tags = [];
+
+        foreach ($productIds as $id) {
+            $id = (int) $id;
+
+            if ($id > 0) {
+                $tags['product_'.$id] = 'product_'.$id;
+            }
+        }
+
+        return array_values($tags);
     }
 }

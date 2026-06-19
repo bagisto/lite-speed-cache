@@ -72,13 +72,14 @@
                 @lang('shop::app.components.layouts.header.mobile.orders')
             </a>
             
-            <a
-                v-if="showWishlist"
-                class="cursor-pointer px-5 py-2 text-base"
-                href="{{ route('shop.customers.account.wishlist.index') }}"
-            >
-                @lang('shop::app.components.layouts.header.mobile.wishlist')
-            </a>
+            @if (core()->getConfigData('customer.settings.wishlist.wishlist_option'))
+                <a
+                    class="cursor-pointer px-5 py-2 text-base"
+                    href="{{ route('shop.customers.account.wishlist.index') }}"
+                >
+                    @lang('shop::app.components.layouts.header.mobile.wishlist')
+                </a>
+            @endif
 
             <!--Customers logout-->
             @auth('customer')
