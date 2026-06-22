@@ -35,6 +35,15 @@
             {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.sign_up_button.after') !!}
         </div>
 
+        @if (core()->getConfigData('sales.eu_withdrawal.general.enabled', core()->getCurrentChannelCode()))
+            <a
+                href="{{ route('shop.eu-withdrawal.guest.lookup') }}"
+                class="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-navyBlue hover:underline"
+            >
+                @lang('shop::app.eu_withdrawal.guest_dropdown.link')
+            </a>
+        @endif
+
         {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.customers_action.after') !!}
     </div>
 @endguest
@@ -83,18 +92,14 @@
 
             <!--Customers logout-->
             @auth('customer')
-                <form
-                    novalidate=""
-                    method="POST"
+                <x-shop::form
+                    method="DELETE"
                     action="{{ route('shop.customer.session.destroy') }}"
                     id="customerLogout"
-                >
-                    @csrf
-                    <input type="hidden" name="_method" value="DELETE">
-                </form>
+                />
 
                 <a
-                    class="cursor-pointer px-5 py-2 text-base hover:bg-gray-100"
+                    class="px-5 py-2 text-base cursor-pointer hover:bg-gray-100"
                     href="{{ route('shop.customer.session.destroy') }}"
                     onclick="event.preventDefault(); document.getElementById('customerLogout').submit();"
                 >

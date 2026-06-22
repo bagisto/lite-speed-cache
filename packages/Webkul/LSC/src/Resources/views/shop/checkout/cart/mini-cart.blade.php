@@ -96,7 +96,7 @@
                             {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.content.image.before') !!}
 
                             <div class="">
-                                <a :href="`{{ route('shop.product_or_category.index', '') }}/${item.product_url_key}`">
+                                <a :href="'{{ route('shop.product_or_category.index', ':slug') }}'.replace(':slug', item.product_url_key)">
                                     <img
                                         :src="item.base_image.small_image_url"
                                         class="max-w-28 max-h-28 rounded-xl max-md:max-h-20 max-md:max-w-[76px]"
@@ -114,7 +114,7 @@
 
                                     <a
                                     class="max-w-4/5 max-md:w-full"
-                                    :href="`{{ route('shop.product_or_category.index', '') }}/${item.product_url_key}`"
+                                    :href="'{{ route('shop.product_or_category.index', ':slug') }}'.replace(':slug', item.product_url_key)"
                                 >
                                         <p class="text-base font-medium max-md:font-normal max-sm:text-sm">
                                             @{{ item.name }}
@@ -386,6 +386,16 @@
 
         {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.after') !!}
     </script>
+    
+    @php
+        /**
+         * When the cart is empty there is nothing to fetch, so the mini-cart is
+         * seeded with an empty cart server-side. This avoids an `/api/checkout/cart`
+         * request (and a `Cart::collectTotals()` recalculation) on every page view
+         * for the common case of a guest with no cart.
+         */
+        $hasCartItems = (bool) \Webkul\Checkout\Facades\Cart::getCart()?->items->isNotEmpty();
+    @endphp
 
     <script type="module">
         app.component("v-mini-cart", {
@@ -393,7 +403,9 @@
 
             data() {
                 return  {
-                    cart: null,
+                    refreshKey: 0,
+
+                    cart: {!! $hasCartItems ? 'null' : json_encode(['items_qty' => 0, 'items' => []]) !!},
 
                     isLoading:false,
 
@@ -401,15 +413,20 @@
                         prices: "{{ core()->getConfigData('sales.taxes.shopping_cart.display_prices') }}",
                         subtotal: "{{ core()->getConfigData('sales.taxes.shopping_cart.display_subtotal') }}",
                     },
-                }
+                };
             },
 
             mounted() {
+                /**
+                 * Always fetch the live, per-user cart on every page load. The
+                 * storefront HTML is shared via LiteSpeed full-page cache, so any
+                 * server-seeded `cart` value may be stale; the private cart API
+                 * (never publicly cached) is the source of truth. This guarantees
+                 * the `/api/checkout/cart` request fires on every refresh.
+                 */
                 this.getCart();
 
                 /**
-                 * To Do: Implement this.
-                 *
                  * Action.
                  */
                 this.$emitter.on('update-mini-cart', (cart) => {
@@ -435,14 +452,44 @@
 
                     this.$axios.put('{{ route('shop.api.checkout.cart.update') }}', { qty })
                         .then(response => {
-                            if (response.data.message) {
-                                this.cart = response.data.data;
+                            this.isLoading = false;
+
+                            /**
+                             * The update endpoint returns `{ data: CartResource, message }`
+                             * on success and only `{ message }` on failure (e.g.
+                             * inventory-warning). Only treat the payload as a cart when
+                             * it has an `items` field — otherwise surface the server
+                             * message as a warning flash.
+                             */
+                            const payload = response.data.data;
+
+                            if (payload && payload.items !== undefined) {
+                                this.cart = payload;
                             } else {
-                                this.$emitter.emit('add-flash', { type: 'warning', message: response.data.data.message });
+                                this.$emitter.emit('add-flash', {
+                                    type: 'warning',
+                                    message: payload?.message || response.data.message,
+                                });
                             }
 
+                            /**
+                             * Bump the key so the quantity-changer remounts from the
+                             * current server value even when the update was rejected
+                             * (in which case `value` didn't change and the component's
+                             * `value` watcher wouldn't fire).
+                             */
+                            this.refreshKey++;
+                        })
+                        .catch(error => {
                             this.isLoading = false;
-                        }).catch(error => this.isLoading = false);
+
+                            this.$emitter.emit('add-flash', {
+                                type: 'error',
+                                message: error.response?.data?.message || error.message,
+                            });
+
+                            this.refreshKey++;
+                        });
                 },
 
                 removeItem(itemId) {
