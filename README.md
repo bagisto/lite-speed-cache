@@ -61,8 +61,19 @@ php artisan vendor:publish --provider="Litespeed\LSCache\LSCacheServiceProvider"
 ```bash
 <IfModule LiteSpeed>
    CacheLookup on
+
+   # Register the cookies that public cache entries vary by, so LiteSpeed
+   # includes them in the cache key. The backend also declares these via the
+   # X-LiteSpeed-Vary response header, but OpenLiteSpeed needs them registered
+   # here to actually bucket the cache per cookie value.
+   RewriteEngine On
+   RewriteRule .* - [E="Cache-Vary:lsc_customer_group,bagisto_locale,bagisto_currency"]
 </IfModule>
 ```
+
+> ⚠️ The `Cache-Vary` line is **required**. Without it, public pages are cached
+> with a single shared key, so visitors in different customer groups, locales or
+> currencies will be served the wrong cached page.
 
 ### 2. Configure Bagisto LSC Package
 Unzip the `bagisto LSC package` zip to the bagisto root directory, and Follow the below mention steps:
@@ -88,6 +99,24 @@ composer dump-autoload
 ```php
 php artisan litespeed:install
 ```
+
+### 3. Optional Configuration
+
+These settings are optional — the package works with sensible defaults — but are worth knowing for tuning:
+
+#### Edge Side Includes (ESI)
+The per-user login dropdown and cart-count badge are served as ESI fragments and assembled per visitor at the edge. ESI is only available on **LiteSpeed Web Server Enterprise** (OpenLiteSpeed has no ESI support, and falls back to AJAX hole-punching automatically). To enable it, set `esi` to `true` in the published `config/lscache.php`:
+
+```php
+'esi' => true,
+```
+
+#### Environment tunables (`.env`)
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LSCACHE_DEFAULT_TTL` | admin config value | Public cache TTL in seconds (falls back to the value set in the admin panel). |
+| `LSCACHE_DEFAULT_CACHEABILITY` | `public` | Default cacheability (`public` / `private`) for cached routes. |
+| `LSCACHE_DEBUG` | `false` | Emit LiteSpeed debug headers to inspect cache hits/misses and tags. |
 
 ### For more information about the LSCache, You can follow the [Official LiteSpeed Documentation](https://docs.litespeedtech.com/lscache/lsclaravel/installation/#installation)
 
