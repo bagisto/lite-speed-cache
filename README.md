@@ -33,7 +33,7 @@ It significantly improves application performance without requiring complex conf
 
 ## 🚀 Requirements
 
-- [Bagisto v2.3.6](https://github.com/bagisto/bagisto/tree/v2.3.6)  
+- [Bagisto v2.4.6](https://github.com/bagisto/bagisto/tree/v2.4.6)  
 - Installed & configured [LiteSpeed Web Server](https://docs.litespeedtech.com/lsws/) with **LSCache enabled**  
 
 👉 To verify if a URL is cached, use the [LSCache Check Tool](https://check.lscache.io/).
@@ -61,6 +61,13 @@ php artisan vendor:publish --provider="Litespeed\LSCache\LSCacheServiceProvider"
 ```bash
 <IfModule LiteSpeed>
    CacheLookup on
+
+   # Register the cookies that public cache entries vary by, so LiteSpeed
+   # includes them in the cache key. The backend also declares these via the
+   # X-LiteSpeed-Vary response header, but OpenLiteSpeed needs them registered
+   # here to actually bucket the cache per cookie value.
+   RewriteEngine On
+   RewriteRule .* - [E="Cache-Vary:lsc_customer_group,bagisto_locale,bagisto_currency"]
 </IfModule>
 ```
 
